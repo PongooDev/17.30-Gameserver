@@ -138,7 +138,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="AbilitySystemComponent.h" />
     <ClInclude Include="FortGameModeAthena.h" />
+    <ClInclude Include="FortInventory.h" />
     <ClInclude Include="FortPlayerControllerAthena.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="Globals.h" />

@@ -9,7 +9,7 @@ namespace Misc {
 	}
 
 	bool CanCreateInCurrentContext() {
-		Log("CanCreateInCurrentContext Called!");
+		//Log("CanCreateInCurrentContext Called!");
 		return true;
 	}
 
@@ -26,7 +26,9 @@ namespace Misc {
 		MH_CreateHook((LPVOID)(ImageBase + 0x28932FC), nullFunc, nullptr); //ChangeGameSessionId
 		MH_CreateHook((LPVOID)(ImageBase + 0x15A07D8), DispatchRequest, (LPVOID*)&DispatchRequestOG);
 
-		//MH_CreateHook((LPVOID)(ImageBase + 0x55253E8), CanCreateInCurrentContext, nullptr); // CanCreateInCurrentContext
+		HookVTable(AActor::GetDefaultObj(), 0x1B, CanCreateInCurrentContext, nullptr);
+		HookVTable(AAthenaAIDirector::GetDefaultObj(), 0x1B, CanCreateInCurrentContext, nullptr);
+		HookVTable(AAthenaNavMesh::GetDefaultObj(), 0x1B, CanCreateInCurrentContext, nullptr);
 
 		MH_CreateHook((LPVOID)(ImageBase + 0x1371e94), nullFunc, nullptr);
 		MH_CreateHook((LPVOID)(ImageBase + 0x2f327b0), nullFunc, nullptr);

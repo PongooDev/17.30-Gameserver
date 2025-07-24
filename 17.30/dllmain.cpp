@@ -1,6 +1,7 @@
 #include "framework.h"
 #include "FortGameModeAthena.h"
 #include "FortPlayerControllerAthena.h"
+#include "AbilitySystemComponent.h"
 #include "NetDriver.h"
 #include "Misc.h"
 
@@ -28,6 +29,7 @@ void Hook() {
 
     FortGameModeAthena::HookAll();
     FortPlayerControllerAthena::HookAll();
+    AbilitySystemComponent::HookAll();
 
     NetDriver::HookAll();
 

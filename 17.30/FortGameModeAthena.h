@@ -1,5 +1,7 @@
 #pragma once
 #include "framework.h"
+#include "FortInventory.h"
+#include "AbilitySystemComponent.h"
 
 namespace FortGameModeAthena {
 	bool ReadyToStartMatch(AFortGameModeAthena* GameMode) {
@@ -112,7 +114,11 @@ namespace FortGameModeAthena {
 
 				GameMode->AIDirector = SpawnActor<AAthenaAIDirector>({});
 				if (GameMode->AIDirector) {
+					//Log("AIDirector!");
 					GameMode->AIDirector->Activate();
+				}
+				else {
+					Log("No AIDirector!");
 				}
 
 				if (!GameMode->AIGoalManager)
@@ -243,13 +249,157 @@ namespace FortGameModeAthena {
 	APawn* SpawnDefaultPawnFor(AFortGameModeAthena* GameMode, AFortPlayerControllerAthena* NewPlayer, AActor* StartSpot) {
 		Log("SpawnDefaultPawnFor Called!");
 		AFortPlayerPawnAthena* Pawn = (AFortPlayerPawnAthena*)GameMode->SpawnDefaultPawnAtTransform(NewPlayer, StartSpot->GetTransform());
+		AFortPlayerStateAthena* PlayerState = (AFortPlayerStateAthena*)NewPlayer->PlayerState;
+
+		NewPlayer->XPComponent->bRegisteredWithQuestManager = true;
+		NewPlayer->XPComponent->OnRep_bRegisteredWithQuestManager();
+
+		PlayerState->SeasonLevelUIDisplay = NewPlayer->XPComponent->CurrentLevel;
+		PlayerState->OnRep_SeasonLevelUIDisplay();
+
+		UAthenaPickaxeItemDefinition* PickDef;
+		FFortAthenaLoadout& CosmecticLoadoutPC = NewPlayer->CosmeticLoadoutPC;
+		PickDef = CosmecticLoadoutPC.Pickaxe != nullptr ? CosmecticLoadoutPC.Pickaxe : StaticLoadObject<UAthenaPickaxeItemDefinition>("/Game/Athena/Items/Weapons/WID_Harvest_Pickaxe_Athena_C_T01.WID_Harvest_Pickaxe_Athena_C_T01");
+		if (PickDef) {
+			FortInventory::GiveItem(NewPlayer, PickDef->WeaponDefinition, 1, 0);
+		}
+		else {
+			Log("Pick Doesent Exist!");
+		}
+
+		for (size_t i = 0; i < GameMode->StartingItems.Num(); i++)
+		{
+			if (GameMode->StartingItems[i].Count > 0)
+			{
+				FortInventory::GiveItem(NewPlayer, GameMode->StartingItems[i].Item, GameMode->StartingItems[i].Count, 0);
+			}
+		}
+
+		AbilitySystemComponent::GiveAbilitySet(StaticLoadObject<UFortAbilitySet>("/Game/Abilities/Player/Generic/Traits/DefaultPlayer/GAS_AthenaPlayer.GAS_AthenaPlayer"), PlayerState);
+
 		return Pawn;
+	}
+
+	__int64 (*StartAircraftPhaseOG)(AFortGameModeAthena* GameMode, char a2);
+	__int64 StartAircraftPhase(AFortGameModeAthena* GameMode, bool bUseAircraftCountdown) {
+		return StartAircraftPhaseOG(GameMode, bUseAircraftCountdown);
+	}
+
+	static inline void (*OriginalOnAircraftExitedDropZone)(AFortGameModeAthena* GameMode, AFortAthenaAircraft* FortAthenaAircraft);
+	void OnAircraftExitedDropZone(AFortGameModeAthena* GameMode, AFortAthenaAircraft* FortAthenaAircraft)
+	{
+		Log("OnAircraftExitedDropZone!");
+
+		return OriginalOnAircraftExitedDropZone(GameMode, FortAthenaAircraft);
+	}
+
+	__int64 (*OnAircraftEnteredDropZoneOG)(AFortGameModeAthena* GameMode);
+	__int64 OnAircraftEnteredDropZone(AFortGameModeAthena* GameMode)
+	{
+		Log("OnAircraftEnteredDropZone Called!");
+		AFortGameStateAthena* GameState = (AFortGameStateAthena*)UWorld::GetWorld()->GameState;
+		GameState->GamePhaseStep = EAthenaGamePhaseStep::BusFlying;
+
+		return OnAircraftEnteredDropZoneOG(GameMode);
+	}
+
+	// We can make ts proper later yuh
+	static inline void (*StartNewSafeZonePhaseOG)(AFortGameModeAthena* GameMode, int32 ZoneIndex);
+	static void StartNewSafeZonePhase(AFortGameModeAthena* GameMode, int32 ZoneIndex) {
+		auto GameState = AFortGameStateAthena::GetDefaultObj();
+
+		FFortSafeZoneDefinition* SafeZoneDefinition = &GameState->MapInfo->SafeZoneDefinition;
+
+		auto Duration = 30.f;
+		auto HoldDuration = 10.f;
+		static auto DPS = 1.f;
+
+		switch (GameMode->SafeZonePhase) {
+		case 0:
+			Duration = 140.f;
+			HoldDuration = 60.f;
+			break;
+		case 1:
+			Duration = 120.f;
+			HoldDuration = 110.f;
+			DPS = 2.f;
+			break;
+		case 2:
+			Duration = 90.f;
+			HoldDuration = 110.f;
+			DPS = 3.f;
+			break;
+		case 3:
+			Duration = 95.f;
+			HoldDuration = 95.f;
+			DPS = 4.f;
+			break;
+		case 4:
+			Duration = 90.f;
+			HoldDuration = 90.f;
+			DPS = 5.f;
+			break;
+		case 5:
+			Duration = 50.f;
+			HoldDuration = 70.f;
+			break;
+		case 6:
+			Duration = 50.f;
+			HoldDuration = 70.f;
+			DPS = 10.f;
+			break;
+		case 7:
+			Duration = 50.f;
+			HoldDuration = 70.f;
+			break;
+		case 8:
+			Duration = 35.f;
+			HoldDuration = 60.f;
+			DPS = 10.f;
+			break;
+		case 9:
+			Duration = 20.f;
+			HoldDuration = 60.f;
+			break;
+		case 10:
+			Duration = 55.f;
+			HoldDuration = 60.f;
+			break;
+		case 11:
+			Duration = 50.f;
+			HoldDuration = 60.f;
+			break;
+		case 12:
+			Duration = 80.f;
+			HoldDuration = 60.f;
+			break;
+		default:
+			Duration = 15.f;
+			HoldDuration = 45.f;
+			break;
+		}
+
+		GameMode->SafeZoneIndicator->SafeZoneStartShrinkTime = UGameplayStatics::GetTimeSeconds(UWorld::GetWorld()) + HoldDuration;
+		GameMode->SafeZoneIndicator->SafeZoneFinishShrinkTime = GameMode->SafeZoneIndicator->SafeZoneStartShrinkTime + Duration;
+
+		GameState->OnRep_SafeZoneIndicator();
+		GameState->OnRep_SafeZonePhase();
+
+		StartNewSafeZonePhaseOG(GameMode, ZoneIndex);
 	}
 
 	void HookAll() {
 		MH_CreateHook((LPVOID)(ImageBase + 0x478A48C), ReadyToStartMatch, nullptr);
 
 		MH_CreateHook((LPVOID)(ImageBase + 0x4793EFC), SpawnDefaultPawnFor, (LPVOID*)&SpawnDefaultPawnForOG);
+
+		MH_CreateHook((LPVOID)(ImageBase + 0x4796A0C), StartAircraftPhase, (LPVOID*)&StartAircraftPhaseOG);
+
+		MH_CreateHook((LPVOID)(ImageBase + 0x4780DD0), OnAircraftExitedDropZone, (LPVOID*)&OriginalOnAircraftExitedDropZone);
+
+		MH_CreateHook((LPVOID)(ImageBase + 0x45109A4), OnAircraftEnteredDropZone, (LPVOID*)&OnAircraftEnteredDropZoneOG);
+
+		MH_CreateHook((LPVOID)(ImageBase + 0x4799688), StartNewSafeZonePhase, (LPVOID*)&StartNewSafeZonePhaseOG);
 
 		Log("FortGameModeAthena Hooked!");
 	}
