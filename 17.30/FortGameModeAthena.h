@@ -257,6 +257,11 @@ namespace FortGameModeAthena {
 		PlayerState->SeasonLevelUIDisplay = NewPlayer->XPComponent->CurrentLevel;
 		PlayerState->OnRep_SeasonLevelUIDisplay();
 
+		NewPlayer->GetQuestManager(ESubGame::Athena)->InitializeQuestAbilities(NewPlayer->Pawn);
+
+		UFortKismetLibrary::UpdatePlayerCustomCharacterPartsVisualization(PlayerState);
+		PlayerState->OnRep_CharacterData();
+
 		UAthenaPickaxeItemDefinition* PickDef;
 		FFortAthenaLoadout& CosmecticLoadoutPC = NewPlayer->CosmeticLoadoutPC;
 		PickDef = CosmecticLoadoutPC.Pickaxe != nullptr ? CosmecticLoadoutPC.Pickaxe : StaticLoadObject<UAthenaPickaxeItemDefinition>("/Game/Athena/Items/Weapons/WID_Harvest_Pickaxe_Athena_C_T01.WID_Harvest_Pickaxe_Athena_C_T01");
@@ -276,6 +281,8 @@ namespace FortGameModeAthena {
 		}
 
 		AbilitySystemComponent::GiveAbilitySet(StaticLoadObject<UFortAbilitySet>("/Game/Abilities/Player/Generic/Traits/DefaultPlayer/GAS_AthenaPlayer.GAS_AthenaPlayer"), PlayerState);
+
+		ApplyCharacterCustomization(PlayerState, Pawn);
 
 		return Pawn;
 	}
@@ -306,81 +313,34 @@ namespace FortGameModeAthena {
 	// We can make ts proper later yuh
 	static inline void (*StartNewSafeZonePhaseOG)(AFortGameModeAthena* GameMode, int32 ZoneIndex);
 	static void StartNewSafeZonePhase(AFortGameModeAthena* GameMode, int32 ZoneIndex) {
-		auto GameState = AFortGameStateAthena::GetDefaultObj();
+		AFortGameStateAthena* GameState = (AFortGameStateAthena*)GameMode->GameState;
 
 		FFortSafeZoneDefinition* SafeZoneDefinition = &GameState->MapInfo->SafeZoneDefinition;
+		Log("SafeZonePhase: " + std::to_string(GameMode->SafeZonePhase));
 
-		auto Duration = 30.f;
-		auto HoldDuration = 10.f;
-		static auto DPS = 1.f;
-
-		switch (GameMode->SafeZonePhase) {
-		case 0:
-			Duration = 140.f;
-			HoldDuration = 60.f;
-			break;
-		case 1:
-			Duration = 120.f;
-			HoldDuration = 110.f;
-			DPS = 2.f;
-			break;
-		case 2:
-			Duration = 90.f;
-			HoldDuration = 110.f;
-			DPS = 3.f;
-			break;
-		case 3:
-			Duration = 95.f;
-			HoldDuration = 95.f;
-			DPS = 4.f;
-			break;
-		case 4:
-			Duration = 90.f;
-			HoldDuration = 90.f;
-			DPS = 5.f;
-			break;
-		case 5:
-			Duration = 50.f;
-			HoldDuration = 70.f;
-			break;
-		case 6:
-			Duration = 50.f;
-			HoldDuration = 70.f;
-			DPS = 10.f;
-			break;
-		case 7:
-			Duration = 50.f;
-			HoldDuration = 70.f;
-			break;
-		case 8:
-			Duration = 35.f;
-			HoldDuration = 60.f;
-			DPS = 10.f;
-			break;
-		case 9:
-			Duration = 20.f;
-			HoldDuration = 60.f;
-			break;
-		case 10:
-			Duration = 55.f;
-			HoldDuration = 60.f;
-			break;
-		case 11:
-			Duration = 50.f;
-			HoldDuration = 60.f;
-			break;
-		case 12:
-			Duration = 80.f;
-			HoldDuration = 60.f;
-			break;
-		default:
-			Duration = 15.f;
-			HoldDuration = 45.f;
-			break;
+		static UCurveTable* AthenaGameData = StaticLoadObject<UCurveTable>(UKismetStringLibrary::Conv_NameToString(GameState->CurrentPlaylistInfo.BasePlaylist->GameData.ObjectID.AssetPathName).ToString());
+		if (!AthenaGameData) {
+			AthenaGameData = StaticLoadObject<UCurveTable>("/Game/Athena/Balance/DataTables/AthenaGameData.AthenaGameData");
+		}
+		float CurrentWaitTime = 30.f;
+		EEvaluateCurveTableResult WaitTimeResult;
+		UDataTableFunctionLibrary::EvaluateCurveTableRow(AthenaGameData, UKismetStringLibrary::Conv_StringToName(L"Default.SafeZone.WaitTime"), (GameMode->SafeZonePhase + 1), &WaitTimeResult, &CurrentWaitTime, FString());
+		if (WaitTimeResult == EEvaluateCurveTableResult::RowNotFound) {
+			Log("Not Found WaitTime Row!");
+		}
+		else {
+			GameMode->SafeZoneIndicator->SafeZoneStartShrinkTime = UGameplayStatics::GetTimeSeconds(UWorld::GetWorld()) + CurrentWaitTime;
 		}
 
-		GameMode->SafeZoneIndicator->SafeZoneStartShrinkTime = UGameplayStatics::GetTimeSeconds(UWorld::GetWorld()) + HoldDuration;
-		GameMode->SafeZoneIndicator->SafeZoneFinishShrinkTime = GameMode->SafeZoneIndicator->SafeZoneStartShrinkTime + Duration;
+		float CurrentShrinkTime = 30.f;
+		EEvaluateCurveTableResult ShrinkTimeResult;
+		UDataTableFunctionLibrary::EvaluateCurveTableRow(AthenaGameData, UKismetStringLibrary::Conv_StringToName(L"Default.SafeZone.ShrinkTime"), (GameMode->SafeZonePhase + 1), &ShrinkTimeResult, &CurrentShrinkTime, FString());
+		if (ShrinkTimeResult == EEvaluateCurveTableResult::RowNotFound) {
+			Log("Not Found ShrinkTime Row!");
+		}
+		else {
+			GameMode->SafeZoneIndicator->SafeZoneFinishShrinkTime = GameMode->SafeZoneIndicator->SafeZoneStartShrinkTime + CurrentShrinkTime;
+		}
 
 		GameState->OnRep_SafeZoneIndicator();
 		GameState->OnRep_SafeZonePhase();
