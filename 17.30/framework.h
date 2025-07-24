@@ -37,7 +37,7 @@ static UFortBuildingItemDefinition* Stair = UObject::FindObject<UFortBuildingIte
 static UFortBuildingItemDefinition* Wall = UObject::FindObject<UFortBuildingItemDefinition>("FortBuildingItemDefinition BuildingItemData_Wall.BuildingItemData_Wall");
 static UFortEditToolItemDefinition* EditTool = UObject::FindObject<UFortEditToolItemDefinition>("FortEditToolItemDefinition EditTool.EditTool");
 
-void (*ServerReplicateActors)(UNetDriver* This, float DeltaSeconds) = decltype(ServerReplicateActors)(ImageBase + 0x3DDF340);
+void (*ServerReplicateActors)(UReplicationDriver* This, float DeltaSeconds) = decltype(ServerReplicateActors)(ImageBase + 0x3DDF340);
 
 static UNetDriver* (*CreateNetDriver)(UEngine* This, UWorld* InWorld, FName NetDriverDefinition) = decltype(CreateNetDriver)(ImageBase + 0x4DD092C);
 static bool (*InitListen)(UNetDriver* This, UWorld* InWorld, FURL& ListenURL, bool bReuseAddressAndPort, FString& Error) = decltype(InitListen)(ImageBase + 0x3A01BF4);

@@ -20,7 +20,8 @@ namespace Misc {
 	}
 
 	void HookAll() {
-		MH_CreateHook((LPVOID)(ImageBase + 0x6172BF8), KickPlayer, nullptr);
+		//MH_CreateHook((LPVOID)(ImageBase + 0x6172BF8), KickPlayer, nullptr);
+		MH_CreateHook((LPVOID)(ImageBase + 0x4D68614), KickPlayer, nullptr);
 		//MH_CreateHook((LPVOID)(ImageBase + 0x1371ABC), IsFalse, nullptr); //CollectGarbage
 		MH_CreateHook((LPVOID)(ImageBase + 0x28932FC), nullFunc, nullptr); //ChangeGameSessionId
 		MH_CreateHook((LPVOID)(ImageBase + 0x15A07D8), DispatchRequest, (LPVOID*)&DispatchRequestOG);

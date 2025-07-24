@@ -5,8 +5,10 @@ namespace NetDriver {
 	void (*TickFlushOG)(UNetDriver* This, float DeltaSeconds);
 	void TickFlush(UNetDriver* This, float DeltaSeconds) {
 		if (This->ClientConnections.Num() > 0) {
-			ServerReplicateActors(This, DeltaSeconds);
+			ServerReplicateActors(This->ReplicationDriver, DeltaSeconds);
 		}
+
+		return TickFlushOG(This, DeltaSeconds); //bro forgot to add return
 	}
 
 	float GetMaxTickRate(float DeltaTime, bool bAllowFrameRateSmoothing = true) {
