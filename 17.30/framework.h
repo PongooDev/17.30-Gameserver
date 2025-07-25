@@ -278,7 +278,7 @@ T* Actors(UClass* Class = T::StaticClass(), FVector Loc = {}, FRotator Rot = {},
 	return SpawnActor<T>(Loc, Rot, Owner, Class);
 }
 
-AFortPickup* SpawnPickup(UFortItemDefinition* ItemDef, int OverrideCount, int LoadedAmmo, FVector Loc, EFortPickupSourceTypeFlag SourceType, EFortPickupSpawnSource Source, AFortPawn* Pawn = nullptr)
+AFortPickup* SpawnPickup(UFortItemDefinition* ItemDef, int OverrideCount, int LoadedAmmo, FVector Loc, EFortPickupSourceTypeFlag SourceType, EFortPickupSpawnSource Source, bool bShouldCombine = false, AFortPawn* Pawn = nullptr)
 {
 	auto SpawnedPickup = Actors<AFortPickup>(AFortPickup::StaticClass(), Loc);
 	SpawnedPickup->bRandomRotation = true;
@@ -291,7 +291,7 @@ AFortPickup* SpawnPickup(UFortItemDefinition* ItemDef, int OverrideCount, int Lo
 	SpawnedPickup->OnRep_PrimaryPickupItemEntry();
 	SpawnedPickup->PawnWhoDroppedPickup = Pawn;
 
-	SpawnedPickup->TossPickup(Loc, Pawn, -1, true, false, SourceType, Source);
+	SpawnedPickup->TossPickup(Loc, Pawn, -1, true, bShouldCombine, SourceType, Source);
 
 	SpawnedPickup->SetReplicateMovement(true);
 	SpawnedPickup->MovementComponent = (UProjectileMovementComponent*)GetDefaultObject<UGameplayStatics>()->SpawnObject(UProjectileMovementComponent::StaticClass(), SpawnedPickup);

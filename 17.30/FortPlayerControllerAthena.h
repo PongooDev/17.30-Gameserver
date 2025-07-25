@@ -1,6 +1,7 @@
 #pragma once
 #include "framework.h"
 #include "FortInventory.h"
+#include "Looting.h"
 
 namespace FortPlayerControllerAthena {
 	void (*ServerAcknowledgePossessionOG)(AFortPlayerControllerAthena* This, AFortPlayerPawnAthena* Pawn);
@@ -9,6 +10,26 @@ namespace FortPlayerControllerAthena {
 		This->AcknowledgedPawn = Pawn;
 
 		return ServerAcknowledgePossessionOG(This, Pawn);
+	}
+
+	void (*ServerReadyToStartMatchOG)(AFortPlayerControllerAthena* PC);
+	void ServerReadyToStartMatch(AFortPlayerControllerAthena* PC) {
+		if (!PC) {
+			Log("ServerReadyToStartMatch: No PC!");
+			return;
+		}
+
+		static bool bSetupWorld = false;
+
+		if (!bSetupWorld)
+		{
+			bSetupWorld = true;
+			Looting::SpawnFloorLoot();
+
+			Log("Setup World!");
+		}
+
+		return ServerReadyToStartMatchOG(PC);
 	}
 
 	void (*ServerExecuteInventoryItemOG)(AFortPlayerControllerAthena* PC, FGuid& ItemGuid);
@@ -45,6 +66,8 @@ namespace FortPlayerControllerAthena {
 	void HookAll() {
 		//MH_CreateHook((LPVOID)(ImageBase + 0xC264C0), ServerAcknowledgePossession, (LPVOID*)&ServerAcknowledgePossessionOG);
 		HookVTable(AFortPlayerControllerAthena::GetDefaultObj(), 0x114, ServerAcknowledgePossession, (LPVOID*)&ServerAcknowledgePossessionOG);
+
+		HookVTable(AFortPlayerControllerAthena::GetDefaultObj(), 0x278, ServerReadyToStartMatch, (LPVOID*)&ServerReadyToStartMatchOG);
 
 		HookVTable(AFortPlayerControllerAthena::GetDefaultObj(), 0x215, ServerExecuteInventoryItem, (LPVOID*)&ServerExecuteInventoryItemOG);
 

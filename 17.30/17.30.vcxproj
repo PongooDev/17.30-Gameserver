@@ -139,11 +139,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="AbilitySystemComponent.h" />
+    <ClInclude Include="Building.h" />
     <ClInclude Include="FortGameModeAthena.h" />
     <ClInclude Include="FortInventory.h" />
     <ClInclude Include="FortPlayerControllerAthena.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="Globals.h" />
+    <ClInclude Include="Looting.h" />
     <ClInclude Include="Misc.h" />
     <ClInclude Include="NetDriver.h" />
     <ClInclude Include="SDK\PropertyFixup.hpp" />
