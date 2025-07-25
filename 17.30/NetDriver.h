@@ -96,10 +96,19 @@ namespace NetDriver {
 		return 30.f;
 	}
 
+	int GetNetMode()
+	{
+		return (int)ENetMode::DedicatedServer;
+	}
+
 	void HookAll() {
 		MH_CreateHook((LPVOID)(ImageBase + 0xE4043C), TickFlush, (LPVOID*)&TickFlushOG);
 
 		MH_CreateHook((LPVOID)(ImageBase + 0x104914C), GetMaxTickRate, nullptr);
+
+		MH_CreateHook((LPVOID)(ImageBase + 0xCD2164), GetNetMode, nullptr); // UWorld::GetNEtMode
+		MH_CreateHook((LPVOID)(ImageBase + 0xE44930), GetNetMode, nullptr); // AActor::GetNetMode
+		MH_CreateHook((LPVOID)(ImageBase + 0xE433AC), GetNetMode, nullptr); // UNetDriver::GetNetMode
 
 		Log("NetDriver Hooked!");
 	}

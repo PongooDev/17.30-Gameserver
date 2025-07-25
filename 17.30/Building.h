@@ -51,13 +51,82 @@ namespace Building {
 				}
 			}
 		}
-		FortInventory::Update(PC);
 
 		return OnDamageServerOG(This, Damage, DamageTags, Momentum, HitInfo, InstigatedBy, DamageCauser, EffectContext);
 	}
 
+	void (*ServerCreateBuildingActorOG)(AFortPlayerControllerAthena* PC, FCreateBuildingActorData& CreateBuildingData);
+	void ServerCreateBuildingActor(AFortPlayerControllerAthena* PC, FCreateBuildingActorData& CreateBuildingData) {
+		Log("ServerCreateBuildingActor Called!");
+		if (!PC) {
+			Log("No PC!");
+			return;
+		}
+
+		UClass* BuildingClass = PC->BroadcastRemoteClientInfo->RemoteBuildableClass.Get();
+
+		TArray<ABuildingSMActor*> BuildingsToRemove;
+		char BuildRestrictionFlag;
+		if (CantBuild(UWorld::GetWorld(), BuildingClass, CreateBuildingData.BuildLoc, CreateBuildingData.BuildRot, CreateBuildingData.bMirrored, &BuildingsToRemove, &BuildRestrictionFlag))
+		{
+			Log("CantBuild!");
+			return; 
+		}
+
+		auto ResourceItemDefinition = UFortKismetLibrary::GetDefaultObj()->K2_GetResourceItemDefinition(((ABuildingSMActor*)BuildingClass->DefaultObject)->ResourceType);
+		FortInventory::RemoveItem(PC, ResourceItemDefinition, 10);
+
+		ABuildingSMActor* PlacedBuilding = SpawnActor<ABuildingSMActor>(CreateBuildingData.BuildLoc, CreateBuildingData.BuildRot, PC, BuildingClass);
+		PlacedBuilding->bPlayerPlaced = true;
+		PlacedBuilding->InitializeKismetSpawnedBuildingActor(PlacedBuilding, PC, true, nullptr);
+		PlacedBuilding->TeamIndex = ((AFortPlayerStateAthena*)PC->PlayerState)->TeamIndex;
+		PlacedBuilding->Team = EFortTeam(PlacedBuilding->TeamIndex);
+
+		for (size_t i = 0; i < BuildingsToRemove.Num(); i++)
+		{
+			BuildingsToRemove[i]->K2_DestroyActor();
+		}
+		BuildingsToRemove.Free();
+	}
+
+	void (*ServerBeginEditingBuildingActorOG)(AFortPlayerControllerAthena* PC, ABuildingSMActor* BuildingActorToEdit);
+	void ServerBeginEditingBuildingActor(AFortPlayerControllerAthena* PC, ABuildingSMActor* BuildingActorToEdit)
+	{
+		//Log("ServerBeginEditingBuildingActor Called!");
+		if (!BuildingActorToEdit || !BuildingActorToEdit->bPlayerPlaced || !PC->MyFortPawn)
+			return;
+
+		AFortPlayerStateAthena* PlayerState = (AFortPlayerStateAthena*)PC->PlayerState;
+		BuildingActorToEdit->SetNetDormancy(ENetDormancy::DORM_Awake);
+		BuildingActorToEdit->EditingPlayer = PlayerState;
+
+		for (int i = 0; i < PC->WorldInventory->Inventory.ItemInstances.Num(); i++)
+		{
+			auto Item = PC->WorldInventory->Inventory.ItemInstances[i];
+			if (Item->GetItemDefinitionBP()->IsA(UFortEditToolItemDefinition::StaticClass()))
+			{
+				PC->MyFortPawn->EquipWeaponDefinition((UFortWeaponItemDefinition*)Item->GetItemDefinitionBP(), Item->GetItemGuid(), Item->GetTrackerGuid(), false);
+				break;
+			}
+		}
+
+		if (!PC->MyFortPawn->CurrentWeapon || !PC->MyFortPawn->CurrentWeapon->IsA(AFortWeap_EditingTool::StaticClass()))
+			return;
+
+		AFortWeap_EditingTool* EditTool = (AFortWeap_EditingTool*)PC->MyFortPawn->CurrentWeapon;
+		EditTool->EditActor = BuildingActorToEdit;
+		EditTool->OnRep_EditActor();
+
+		return ServerBeginEditingBuildingActorOG(PC, BuildingActorToEdit);
+	}
+
 	void HookAll() {
 		MH_CreateHook((LPVOID)(ImageBase + 0x515FEA4), OnDamageServer, (LPVOID*)&OnDamageServerOG);
+
+		//MH_CreateHook((LPVOID)(ImageBase + 0x53951E0), ServerCreateBuildingActor, (LPVOID*)&ServerCreateBuildingActorOG);
+		HookVTable(AAthena_PlayerController_C::GetDefaultObj(), 0x239, ServerCreateBuildingActor, (LPVOID*)&ServerCreateBuildingActorOG);
+
+		HookVTable(AAthena_PlayerController_C::GetDefaultObj(), 0x240, ServerBeginEditingBuildingActor, (LPVOID*)&ServerBeginEditingBuildingActorOG);
 
 		Log("Building Hooked!");
 	}

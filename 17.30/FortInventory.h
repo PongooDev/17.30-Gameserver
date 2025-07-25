@@ -26,7 +26,7 @@ namespace FortInventory {
 			PC->WorldInventory->Inventory.MarkItemDirty(*ItemEntry);
 	}
 
-	inline void GiveItem(AFortPlayerController* PC, UFortItemDefinition* Def, int Count, int LoadedAmmo, bool bShouldAddToExistingStack = false)
+	void GiveItem(AFortPlayerController* PC, UFortItemDefinition* Def, int Count, int LoadedAmmo, bool bShouldAddToExistingStack = false)
 	{
 		if (bShouldAddToExistingStack) {
 			for (FFortItemEntry& ItemEntry : PC->WorldInventory->Inventory.ReplicatedEntries) {
@@ -48,6 +48,32 @@ namespace FortInventory {
 		PC->WorldInventory->Inventory.ItemInstances.Add(Item);
 		PC->WorldInventory->Inventory.MarkItemDirty(Item->ItemEntry);
 		PC->WorldInventory->HandleInventoryLocalUpdate();
+	}
+
+	void RemoveItem(AFortPlayerController* PC, UFortItemDefinition* Def, int Count = INT_MAX) {
+		for (int i = 0; i < PC->WorldInventory->Inventory.ReplicatedEntries.Num(); i++) {
+			FFortItemEntry& ItemEntry = PC->WorldInventory->Inventory.ReplicatedEntries[i];
+			if (Def == ItemEntry.ItemDefinition) {
+				ItemEntry.Count -= Count;
+				if (ItemEntry.Count <= 0) {
+					PC->WorldInventory->Inventory.ReplicatedEntries[i].StateValues.Free();
+					PC->WorldInventory->Inventory.ReplicatedEntries.Remove(i);
+
+					for (int i = 0; i < PC->WorldInventory->Inventory.ItemInstances.Num(); i++)
+					{
+						UFortWorldItem* WorldItem = PC->WorldInventory->Inventory.ItemInstances[i];
+						if (WorldItem->ItemEntry.ItemDefinition == Def) {
+							PC->WorldInventory->Inventory.ItemInstances.Remove(i);
+						}
+					}
+				}
+				else {
+					Update(PC, &ItemEntry);
+				}
+				break;
+			}
+		}
+		Update(PC);
 	}
 
 	FFortItemEntry* FindItemEntry(AFortPlayerControllerAthena* PC, UFortItemDefinition* ItemDef) {
