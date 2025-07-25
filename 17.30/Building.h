@@ -120,6 +120,71 @@ namespace Building {
 		return ServerBeginEditingBuildingActorOG(PC, BuildingActorToEdit);
 	}
 
+	void ServerEndEditingBuildingActor(AFortPlayerControllerAthena* PC, ABuildingSMActor* BuildingActorToStopEditing) {
+		if (!BuildingActorToStopEditing || !PC->MyFortPawn || BuildingActorToStopEditing->bDestroyed == 1 || BuildingActorToStopEditing->EditingPlayer != PC->PlayerState)
+			return;
+		BuildingActorToStopEditing->SetNetDormancy(ENetDormancy::DORM_DormantAll);
+		BuildingActorToStopEditing->EditingPlayer = nullptr;
+		for (size_t i = 0; i < PC->WorldInventory->Inventory.ItemInstances.Num(); i++)
+		{
+			auto Item = PC->WorldInventory->Inventory.ItemInstances[i];
+			if (Item->GetItemDefinitionBP()->IsA(UFortEditToolItemDefinition::StaticClass()))
+			{
+				PC->MyFortPawn->EquipWeaponDefinition((UFortWeaponItemDefinition*)Item->GetItemDefinitionBP(), Item->GetItemGuid(), Item->GetTrackerGuid(), false);
+				break;
+			}
+		}
+		if (!PC->MyFortPawn->CurrentWeapon || !PC->MyFortPawn->CurrentWeapon->WeaponData || !PC->MyFortPawn->CurrentWeapon->IsA(AFortWeap_EditingTool::StaticClass()))
+			return;
+
+		AFortWeap_EditingTool* EditTool = (AFortWeap_EditingTool*)PC->MyFortPawn->CurrentWeapon;
+		EditTool->EditActor = nullptr;
+		EditTool->OnRep_EditActor();
+	}
+
+	void ServerEditBuildingActor(AFortPlayerControllerAthena* PC, ABuildingSMActor* BuildingActorToEdit, TSubclassOf<ABuildingSMActor> NewBuildingClass, uint8 RotationIterations, bool bMirrored) {
+		if (!BuildingActorToEdit || BuildingActorToEdit->EditingPlayer != PC->PlayerState || !NewBuildingClass.Get() || BuildingActorToEdit->bDestroyed == 1)
+			return;
+
+		BuildingActorToEdit->SetNetDormancy(ENetDormancy::DORM_DormantAll);
+		BuildingActorToEdit->EditingPlayer = nullptr;
+		ABuildingSMActor* EditedBuildingActor = ReplaceBuildingActor(BuildingActorToEdit, 1, NewBuildingClass.Get(), 0, RotationIterations, bMirrored, PC);
+		if (EditedBuildingActor)
+			EditedBuildingActor->bPlayerPlaced = true;
+	}
+
+	void ServerRepairBuildingActor(AFortPlayerControllerAthena* PC, ABuildingSMActor* BuildingActorToRepair) {
+		auto FortKismet = (UFortKismetLibrary*)UFortKismetLibrary::StaticClass()->DefaultObject;
+		if (!BuildingActorToRepair)
+			return;
+
+		if (BuildingActorToRepair->EditingPlayer)
+		{
+			return;
+		}
+
+		float BuildingHealthPercent = BuildingActorToRepair->GetHealthPercent();
+		float BuildingCost = 10;
+		float RepairCostMultiplier = 0.75;
+
+		float BuildingHealthPercentLost = 1.0f - BuildingHealthPercent;
+		float RepairCostUnrounded = (BuildingCost * BuildingHealthPercentLost) * RepairCostMultiplier;
+		float RepairCost = std::floor(RepairCostUnrounded > 0 ? RepairCostUnrounded < 1 ? 1 : RepairCostUnrounded : 0);
+		if (RepairCost < 0)
+			return;
+
+		auto ResourceDef = FortKismet->K2_GetResourceItemDefinition(BuildingActorToRepair->ResourceType);
+		if (!ResourceDef)
+			return;
+
+		if (!PC->bBuildFree)
+		{
+			FortInventory::RemoveItem(PC, ResourceDef, (int)RepairCost);
+		}
+
+		BuildingActorToRepair->RepairBuilding(PC, (int)RepairCost);
+	}
+
 	void HookAll() {
 		MH_CreateHook((LPVOID)(ImageBase + 0x515FEA4), OnDamageServer, (LPVOID*)&OnDamageServerOG);
 
@@ -127,6 +192,12 @@ namespace Building {
 		HookVTable(AAthena_PlayerController_C::GetDefaultObj(), 0x239, ServerCreateBuildingActor, (LPVOID*)&ServerCreateBuildingActorOG);
 
 		HookVTable(AAthena_PlayerController_C::GetDefaultObj(), 0x240, ServerBeginEditingBuildingActor, (LPVOID*)&ServerBeginEditingBuildingActorOG);
+
+		HookVTable(AAthena_PlayerController_C::GetDefaultObj(), 0x23E, ServerEndEditingBuildingActor, nullptr);
+
+		HookVTable(AAthena_PlayerController_C::GetDefaultObj(), 0x23B, ServerEditBuildingActor, nullptr);
+
+		HookVTable(AAthena_PlayerController_C::GetDefaultObj(), 0x235, ServerRepairBuildingActor, nullptr);
 
 		Log("Building Hooked!");
 	}
