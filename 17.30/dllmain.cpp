@@ -6,6 +6,7 @@
 #include "Looting.h"
 #include "Building.h"
 #include "NetDriver.h"
+#include "FortAthenaAIBotController.h"
 #include "Misc.h"
 
 void InitConsole() {
@@ -38,6 +39,7 @@ void Hook() {
     Building::HookAll();
 
     NetDriver::HookAll();
+    FortAthenaAIBotController::HookAll();
 
     MH_EnableHook(MH_ALL_HOOKS);
 }

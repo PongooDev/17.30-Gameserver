@@ -185,12 +185,51 @@ namespace FortPlayerPawn {
 		return NetMulticast_Athena_BatchedDamageCuesOG(Pawn, SharedData, NonSharedData);
 	}
 
+	void (*OnReloadOG)(AFortWeapon* a1, int RemoveCount);
+	void OnReload(AFortWeapon* a1, int RemoveCount)
+	{
+		if (!a1) return OnReloadOG(a1, RemoveCount);
+
+		AFortPlayerPawn* Pawn = (AFortPlayerPawn*)a1->GetOwner();
+		if (!Pawn || !Pawn->Controller) return OnReloadOG(a1, RemoveCount);
+
+		AFortPlayerControllerAthena* PC = (AFortPlayerControllerAthena*)Pawn->Controller;
+		if (!PC) return OnReloadOG(a1, RemoveCount);
+		AFortPlayerStateAthena* PlayerState = (AFortPlayerStateAthena*)Pawn->PlayerState;
+		if (!PlayerState || PlayerState->bIsABot) return OnReloadOG(a1, RemoveCount);
+
+		FFortItemEntry* WeaponItemEntry = FortInventory::FindItemEntry(PC, a1->ItemEntryGuid);
+		if (!WeaponItemEntry || !WeaponItemEntry->ItemDefinition) return OnReloadOG(a1, RemoveCount);
+
+		UFortWorldItemDefinition* AmmoItemDef = a1->WeaponData ? a1->WeaponData->GetAmmoWorldItemDefinition_BP() : nullptr;
+		if (!AmmoItemDef) return OnReloadOG(a1, RemoveCount);
+
+		FFortItemEntry* AmmoItemEntry = FortInventory::FindItemEntry(PC, AmmoItemDef);
+		if (AmmoItemEntry)
+		{
+			FortInventory::RemoveItem(PC, AmmoItemEntry->ItemDefinition, RemoveCount);
+		}
+		else
+		{
+			int MaxStackSize = WeaponItemEntry->ItemDefinition->MaxStackSize.Value;
+			if (MaxStackSize > 1) FortInventory::RemoveItem(PC, WeaponItemEntry->ItemDefinition, RemoveCount);
+		}
+
+		WeaponItemEntry->LoadedAmmo = a1->AmmoCount;
+
+		FortInventory::Update(PC, WeaponItemEntry);
+
+		return OnReloadOG(a1, RemoveCount);
+	}
+
 	void HookAll() {
 		HookVTable(APlayerPawn_Athena_C::GetDefaultObj(), 0x208, ServerHandlePickup, nullptr);
 
 		MH_CreateHook((LPVOID)(ImageBase + 0x1BA62B4), CompletePickupAnimation, (LPVOID*)&CompletePickupAnimationOG);
 
 		HookVTable(AFortPlayerPawnAthena::GetDefaultObj(), 0x11B, NetMulticast_Athena_BatchedDamageCues, (LPVOID*)&NetMulticast_Athena_BatchedDamageCuesOG);
+
+		MH_CreateHook((LPVOID)(ImageBase + 0x512FB08), OnReload, (LPVOID*)&OnReloadOG);
 
 		Log("FortPlayerPawn Hooked!");
 	}

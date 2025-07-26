@@ -139,7 +139,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="AbilitySystemComponent.h" />
+    <ClInclude Include="BotsSpawner.h" />
     <ClInclude Include="Building.h" />
+    <ClInclude Include="FortAthenaAIBotController.h" />
     <ClInclude Include="FortGameModeAthena.h" />
     <ClInclude Include="FortInventory.h" />
     <ClInclude Include="FortPlayerControllerAthena.h" />
@@ -149,6 +151,7 @@
     <ClInclude Include="Looting.h" />
     <ClInclude Include="Misc.h" />
     <ClInclude Include="NetDriver.h" />
+    <ClInclude Include="NpcSpawnLocations.h" />
     <ClInclude Include="SDK\PropertyFixup.hpp" />
     <ClInclude Include="SDK\SDK.hpp" />
     <ClInclude Include="SDK\SDK\AIModule_classes.hpp" />

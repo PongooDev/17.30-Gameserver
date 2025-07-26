@@ -2,6 +2,7 @@
 #include "framework.h"
 #include "FortInventory.h"
 #include "Looting.h"
+#include "BotsSpawner.h"
 
 namespace FortPlayerControllerAthena {
 	void (*ServerAcknowledgePossessionOG)(AFortPlayerControllerAthena* This, AFortPlayerPawnAthena* Pawn);
@@ -25,6 +26,10 @@ namespace FortPlayerControllerAthena {
 		{
 			bSetupWorld = true;
 			Looting::SpawnFloorLoot();
+
+			BotsSpawner::SpawnBosses();
+			BotsSpawner::SpawnGuards();
+			BotsSpawner::SpawnNpcs();
 
 			Log("Setup World!");
 		}
@@ -71,6 +76,58 @@ namespace FortPlayerControllerAthena {
 		FortInventory::RemoveItem(PC, Entry->ItemDefinition, Count);
 	}
 
+	void ServerCheat(AFortPlayerControllerAthena* PC, FString& Msg) {
+		if (Globals::bIsProdServer)
+			return;
+
+		auto GameState = (AFortGameStateAthena*)UWorld::GetWorld()->GameState;
+		auto Math = (UKismetMathLibrary*)UKismetMathLibrary::StaticClass()->DefaultObject;
+		auto Gamemode = (AFortGameModeAthena*)UWorld::GetWorld()->AuthorityGameMode;
+		auto Statics = (UGameplayStatics*)UGameplayStatics::StaticClass()->DefaultObject;
+
+		AFortPlayerPawnAthena* Pawn = (AFortPlayerPawnAthena*)PC->Pawn;
+
+		std::string Command = Msg.ToString();
+		Log(Command);
+
+		if (Command == "GodMode") {
+			if (!PC->MyFortPawn->bIsInvulnerable) {
+				PC->MyFortPawn->bIsInvulnerable = true;
+			}
+			else {
+				PC->MyFortPawn->bIsInvulnerable = false;
+			}
+		}
+		else if (Command == "DumpLoc") {
+			FVector Loc = PC->Pawn->K2_GetActorLocation();
+			Log("X: " + std::to_string(Loc.X));
+			Log("Y: " + std::to_string(Loc.Y));
+			Log("Z: " + std::to_string(Loc.Z));
+		}
+		else if (Command.contains("Teleport ")) {
+			std::vector<std::string> args = TextManipUtils::SplitWhitespace(Command);
+			FVector TeleportLoc = FVector();
+
+			TeleportLoc.X = std::stoi(args[1]);
+			TeleportLoc.Y = std::stoi(args[2]);
+			TeleportLoc.Z = std::stoi(args[3]);
+
+			if (!PC->Pawn->K2_TeleportTo(TeleportLoc, PC->Pawn->K2_GetActorRotation())) {
+				FHitResult HitResult;
+				Pawn->K2_SetActorLocation(TeleportLoc, false, &HitResult, true);
+			}
+			Log("Teleported: X: " + args[1] + " Y: " + args[2] + " Z: " + args[3]);
+		}
+		else if (Command == "startaircraft")
+		{
+			UKismetSystemLibrary::GetDefaultObj()->ExecuteConsoleCommand(UWorld::GetWorld(), TEXT("startaircraft"), nullptr);
+		}
+		else if (Command == "pausesafezone")
+		{
+			UKismetSystemLibrary::GetDefaultObj()->ExecuteConsoleCommand(UWorld::GetWorld(), TEXT("pausesafezone"), nullptr);
+		}
+	}
+
 	void HookAll() {
 		//MH_CreateHook((LPVOID)(ImageBase + 0xC264C0), ServerAcknowledgePossession, (LPVOID*)&ServerAcknowledgePossessionOG);
 		HookVTable(AFortPlayerControllerAthena::GetDefaultObj(), 0x114, ServerAcknowledgePossession, (LPVOID*)&ServerAcknowledgePossessionOG);
@@ -82,6 +139,8 @@ namespace FortPlayerControllerAthena {
 		HookVTable(UFortControllerComponent_Aircraft::GetDefaultObj(), 0x94, ServerAttemptAircraftJump, nullptr);
 
 		HookVTable(AFortPlayerControllerAthena::GetDefaultObj(), 0x225, ServerAttemptInventoryDrop, nullptr);
+
+		HookVTable(AFortPlayerControllerAthena::GetDefaultObj(), 0x1CF, ServerCheat, nullptr);
 
 		Log("FortPlayerControllerAthena Hooked!");
 	}

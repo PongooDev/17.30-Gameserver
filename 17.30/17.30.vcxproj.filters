@@ -22,6 +22,12 @@
     <Filter Include="Hooks">
       <UniqueIdentifier>{701c7b00-dc83-4bb5-b999-7d9d5d0ed1b5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Resources">
+      <UniqueIdentifier>{d0b2a1cc-c5e7-4850-ad8b-a122c8166957}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources\AI">
+      <UniqueIdentifier>{288cf6c6-a1b4-4fa3-a3cd-de8781bf9bb5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
@@ -86,6 +92,15 @@
     </ClInclude>
     <ClInclude Include="AbilitySystemComponent.h">
       <Filter>Hooks</Filter>
+    </ClInclude>
+    <ClInclude Include="FortAthenaAIBotController.h">
+      <Filter>Hooks</Filter>
+    </ClInclude>
+    <ClInclude Include="BotsSpawner.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="NpcSpawnLocations.h">
+      <Filter>Resources\AI</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
