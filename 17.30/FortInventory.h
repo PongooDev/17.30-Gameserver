@@ -95,4 +95,51 @@ namespace FortInventory {
 
 		return nullptr;
 	}
+
+	static EFortQuickBars GetQuickBars(UFortItemDefinition* ItemDefinition)
+	{
+		if (!ItemDefinition->IsA(UFortWeaponMeleeItemDefinition::StaticClass()) &&
+			!ItemDefinition->IsA(UFortEditToolItemDefinition::StaticClass()) &&
+			!ItemDefinition->IsA(UFortBuildingItemDefinition::StaticClass()) &&
+			!ItemDefinition->IsA(UFortAmmoItemDefinition::StaticClass()) &&
+			!ItemDefinition->IsA(UFortResourceItemDefinition::StaticClass()) &&
+			!ItemDefinition->IsA(UFortTrapItemDefinition::StaticClass()))
+			return EFortQuickBars::Primary;
+
+		return EFortQuickBars::Secondary;
+	}
+
+	static bool IsInventoryFull(AFortPlayerController* PC)
+	{
+		if (!PC || !PC->WorldInventory) return true;
+
+		static constexpr int Max = 5;
+		int Count = 0;
+
+		for (int i = 0; i < PC->WorldInventory->Inventory.ReplicatedEntries.Num(); i++)
+		{
+			FFortItemEntry* Entries = &PC->WorldInventory->Inventory.ReplicatedEntries[i];
+			if (!Entries) continue;
+			if (!Entries->ItemDefinition) continue;
+
+			if (GetQuickBars(Entries->ItemDefinition) == EFortQuickBars::Primary)
+			{
+				++Count;
+				if (Count >= Max)
+					return true;
+			}
+		}
+
+		return false;
+	}
+
+	float GetMaxStackSize(UFortItemDefinition* Def)
+	{
+		if (!Def->MaxStackSize.Curve.CurveTable)
+			return Def->MaxStackSize.Value;
+		EEvaluateCurveTableResult Result;
+		float Ret;
+		((UDataTableFunctionLibrary*)UDataTableFunctionLibrary::StaticClass()->DefaultObject)->EvaluateCurveTableRow(Def->MaxStackSize.Curve.CurveTable, Def->MaxStackSize.Curve.RowName, 0, &Result, &Ret, FString());
+		return Ret;
+	}
 }

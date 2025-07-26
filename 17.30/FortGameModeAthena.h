@@ -74,6 +74,8 @@ namespace FortGameModeAthena {
 			GameMode->MinRespawnDelay = 5.0f;
 			GameMode->WarmupRequiredPlayerCount = 1;
 
+			GameState->DefaultParachuteDeployTraceForGroundDistance = 10000;
+
 			if (auto BotManager = (UFortServerBotManagerAthena*)UGameplayStatics::SpawnObject(UFortServerBotManagerAthena::StaticClass(), GameMode))
 			{
 				GameMode->ServerBotManager = BotManager;

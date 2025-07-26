@@ -1,6 +1,7 @@
 #include "framework.h"
 #include "FortGameModeAthena.h"
 #include "FortPlayerControllerAthena.h"
+#include "FortPlayerPawn.h"
 #include "AbilitySystemComponent.h"
 #include "Looting.h"
 #include "Building.h"
@@ -31,6 +32,7 @@ void Hook() {
 
     FortGameModeAthena::HookAll();
     FortPlayerControllerAthena::HookAll();
+    FortPlayerPawn::HookAll();
     AbilitySystemComponent::HookAll();
     Looting::HookAll();
     Building::HookAll();

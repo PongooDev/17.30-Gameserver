@@ -28,7 +28,7 @@ namespace Building {
 			FortInventory::GiveItem(PC, ResourceItemDefinition, MaterialCount, 0);
 		}
 		else {
-			int MaxStackSize = ItemEntry->ItemDefinition->MaxStackSize.Value;
+			int MaxStackSize = FortInventory::GetMaxStackSize(ItemEntry->ItemDefinition);
 			int Count = ItemEntry->Count;
 
 			if (Count >= MaxStackSize)

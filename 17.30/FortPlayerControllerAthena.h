@@ -63,6 +63,14 @@ namespace FortPlayerControllerAthena {
 		}
 	}
 
+	void ServerAttemptInventoryDrop(AFortPlayerControllerAthena* PC, FGuid ItemGuid, int Count, bool bTrash)
+	{
+		FFortItemEntry* Entry = FortInventory::FindItemEntry(PC, ItemGuid);
+		AFortPlayerPawn* Pawn = (AFortPlayerPawn*)PC->Pawn;
+		SpawnPickup(Entry->ItemDefinition, Count, Entry->LoadedAmmo, PC->Pawn->K2_GetActorLocation(), EFortPickupSourceTypeFlag::Player, EFortPickupSpawnSource::Unset, Pawn);
+		FortInventory::RemoveItem(PC, Entry->ItemDefinition, Count);
+	}
+
 	void HookAll() {
 		//MH_CreateHook((LPVOID)(ImageBase + 0xC264C0), ServerAcknowledgePossession, (LPVOID*)&ServerAcknowledgePossessionOG);
 		HookVTable(AFortPlayerControllerAthena::GetDefaultObj(), 0x114, ServerAcknowledgePossession, (LPVOID*)&ServerAcknowledgePossessionOG);
@@ -72,6 +80,8 @@ namespace FortPlayerControllerAthena {
 		HookVTable(AFortPlayerControllerAthena::GetDefaultObj(), 0x215, ServerExecuteInventoryItem, (LPVOID*)&ServerExecuteInventoryItemOG);
 
 		HookVTable(UFortControllerComponent_Aircraft::GetDefaultObj(), 0x94, ServerAttemptAircraftJump, nullptr);
+
+		HookVTable(AFortPlayerControllerAthena::GetDefaultObj(), 0x225, ServerAttemptInventoryDrop, nullptr);
 
 		Log("FortPlayerControllerAthena Hooked!");
 	}
