@@ -57,6 +57,9 @@ namespace FortGameModeAthena {
 			GameMode->GameSession->bRequiresPushToTalk = false;
 			GameMode->GameSession->SessionName = UKismetStringLibrary::Conv_StringToName(FString(L"GameSession"));
 
+			Globals::MaxPlayersPerTeam = Playlist->MaxSquadSize;
+			Globals::NextTeamIndex = Playlist->DefaultFirstTeam;
+
 			Log("Setup Playlist: " + Playlist->GetName());
 		}
 
@@ -291,6 +294,13 @@ namespace FortGameModeAthena {
 
 	__int64 (*StartAircraftPhaseOG)(AFortGameModeAthena* GameMode, char a2);
 	__int64 StartAircraftPhase(AFortGameModeAthena* GameMode, bool bUseAircraftCountdown) {
+		Log("StartAircraftPhase Called!");
+		for (AFortAthenaAIBotController* bot : GameMode->AliveBots) {
+			AFortPlayerStateAthena* botPS = (AFortPlayerStateAthena*)bot->PlayerState;
+			botPS->bInAircraft = true;
+			bot->Blackboard->SetValueAsBool(UKismetStringLibrary::GetDefaultObj()->Conv_StringToName(L"AIEvaluator_Global_IsInBus"), true);
+		}
+
 		return StartAircraftPhaseOG(GameMode, bUseAircraftCountdown);
 	}
 
@@ -350,6 +360,23 @@ namespace FortGameModeAthena {
 		StartNewSafeZonePhaseOG(GameMode, ZoneIndex);
 	}
 
+	__int64 (*PickTeamOG)(AFortGameModeAthena* a1, unsigned __int8 a2, AFortPlayerControllerAthena* a3);
+	__int64 __fastcall PickTeam(AFortGameModeAthena* a1, unsigned __int8 a2, AFortPlayerControllerAthena* a3)
+	{
+		int Ret = Globals::NextTeamIndex;
+
+		++Globals::CurrentPlayersOnTeam;
+
+		if (Globals::CurrentPlayersOnTeam == Globals::MaxPlayersPerTeam)
+		{
+			Globals::NextTeamIndex++;
+			Globals::CurrentPlayersOnTeam = 0;
+		}
+
+		Log("PickTeam Called!");
+		return Ret;
+	}
+
 	void HookAll() {
 		MH_CreateHook((LPVOID)(ImageBase + 0x478A48C), ReadyToStartMatch, nullptr);
 
@@ -362,6 +389,8 @@ namespace FortGameModeAthena {
 		MH_CreateHook((LPVOID)(ImageBase + 0x45109A4), OnAircraftEnteredDropZone, (LPVOID*)&OnAircraftEnteredDropZoneOG);
 
 		MH_CreateHook((LPVOID)(ImageBase + 0x4799688), StartNewSafeZonePhase, (LPVOID*)&StartNewSafeZonePhaseOG);
+
+		MH_CreateHook((LPVOID)(ImageBase + 0x4785400), PickTeam, (LPVOID*)&PickTeamOG);
 
 		Log("FortGameModeAthena Hooked!");
 	}

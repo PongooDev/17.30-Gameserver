@@ -36,6 +36,9 @@ namespace FortAthenaAIBotController {
 		AFortGameStateAthena* GameState = (AFortGameStateAthena*)UWorld::GetWorld()->GameState;
 
 		OnPawnAISpawnedOG(Controller, Pawn);
+		if (!AthenaNavSystem->MainNavData) {
+			Log("NavData Dont Exist!");
+		}
 
 		UClass* BotSpawnerData = nullptr;
 		auto PC = (AFortAthenaAIBotController*)Pawn->Controller;
@@ -74,6 +77,12 @@ namespace FortAthenaAIBotController {
 			UFortAthenaAISpawnerDataComponent_ConversationBase* ConversationComp = SpawnerData->GetConversationComponent();
 		}
 
+		if (!PC->PathFollowingComponent->MyNavData) {
+			PC->PathFollowingComponent->MyNavData = AthenaNavSystem->MainNavData;
+		}
+		PC->PathFollowingComponent->OnNavDataRegistered(PC->PathFollowingComponent->MyNavData);
+		PC->PathFollowingComponent->Activate(true);
+
 		if (Pawn->Controller->Class == ABP_PhoebePlayerController_C::StaticClass())
 		{
 			ABP_PhoebePlayerController_C* BotPC = (ABP_PhoebePlayerController_C*)PC;
@@ -84,6 +93,7 @@ namespace FortAthenaAIBotController {
 				}
 				else {
 					Log("Ran BehaviorTree: " + PC->BehaviorTree->GetFullName());
+					BotPC->BlueprintOnBehaviorTreeStarted();
 				}
 
 				BotPC->Blackboard->SetValueAsEnum(UKismetStringLibrary::GetDefaultObj()->Conv_StringToName(L"AIEvaluator_Global_GamePhaseStep"), (int)GameState->GamePhaseStep);
@@ -169,6 +179,42 @@ namespace FortAthenaAIBotController {
 					BotPlayerState->OnRep_PlayerName();
 				}
 
+				for (auto SkillSet : BotPC->BotSkillSetClasses)
+				{
+					if (!SkillSet)
+						continue;
+
+					if (auto AimingSkill = Cast<UFortAthenaAIBotAimingDigestedSkillSet>(SkillSet))
+						BotPC->CacheAimingDigestedSkillSet = AimingSkill;
+
+					if (auto AttackingSkill = Cast<UFortAthenaAIBotAttackingDigestedSkillSet>(SkillSet))
+						BotPC->CacheAttackingSkillSet = AttackingSkill;
+
+					if (auto HarvestSkill = Cast<UFortAthenaAIBotHarvestDigestedSkillSet>(SkillSet))
+						BotPC->CacheHarvestDigestedSkillSet = HarvestSkill;
+
+					if (auto InventorySkill = Cast<UFortAthenaAIBotInventoryDigestedSkillSet>(SkillSet))
+						BotPC->CacheInventoryDigestedSkillSet = InventorySkill;
+
+					if (auto LootingSkill = Cast<UFortAthenaAIBotLootingDigestedSkillSet>(SkillSet))
+						BotPC->CacheLootingSkillSet = LootingSkill;
+
+					if (auto MovementSkill = Cast<UFortAthenaAIBotMovementDigestedSkillSet>(SkillSet))
+						BotPC->CacheMovementSkillSet = MovementSkill;
+
+					if (auto PerceptionSkill = Cast<UFortAthenaAIBotPerceptionDigestedSkillSet>(SkillSet))
+						BotPC->CachePerceptionDigestedSkillSet = PerceptionSkill;
+
+					if (auto PlayStyleSkill = Cast<UFortAthenaAIBotPlayStyleDigestedSkillSet>(SkillSet))
+						BotPC->CachePlayStyleSkillSet = PlayStyleSkill;
+
+					if (auto RangeAttackSkill = Cast<UFortAthenaAIBotRangeAttackDigestedSkillSet>(SkillSet))
+						BotPC->CacheRangeAttackSkillSet = RangeAttackSkill;
+
+					if (auto UnstuckSkill = Cast<UFortAthenaAIBotUnstuckDigestedSkillSet>(SkillSet))
+						BotPC->CacheUnstuckSkillSet = UnstuckSkill;
+				}
+
 				if (!BotPC->Inventory)
 					BotPC->Inventory = SpawnActor<AFortInventory>({}, {}, BotPC);
 
@@ -203,9 +249,49 @@ namespace FortAthenaAIBotController {
 						Pawn->EquipWeaponDefinition(WeaponDef, Entry.ItemGuid, Entry.TrackerGuid, false);
 					}
 				}
+
+				GameMode->AliveBots.Add(BotPC);
+				GameState->PlayerBotsLeft++;
+				GameState->OnRep_PlayerBotsLeft();
 			}
 			AmountTimesCalled++;
 			return;
+		}
+
+		for (auto SkillSet : PC->BotSkillSetClasses)
+		{
+			if (!SkillSet)
+				continue;
+
+			if (auto AimingSkill = Cast<UFortAthenaAIBotAimingDigestedSkillSet>(SkillSet))
+				PC->CacheAimingDigestedSkillSet = AimingSkill;
+
+			if (auto AttackingSkill = Cast<UFortAthenaAIBotAttackingDigestedSkillSet>(SkillSet))
+				PC->CacheAttackingSkillSet = AttackingSkill;
+
+			if (auto HarvestSkill = Cast<UFortAthenaAIBotHarvestDigestedSkillSet>(SkillSet))
+				PC->CacheHarvestDigestedSkillSet = HarvestSkill;
+
+			if (auto InventorySkill = Cast<UFortAthenaAIBotInventoryDigestedSkillSet>(SkillSet))
+				PC->CacheInventoryDigestedSkillSet = InventorySkill;
+
+			if (auto LootingSkill = Cast<UFortAthenaAIBotLootingDigestedSkillSet>(SkillSet))
+				PC->CacheLootingSkillSet = LootingSkill;
+
+			if (auto MovementSkill = Cast<UFortAthenaAIBotMovementDigestedSkillSet>(SkillSet))
+				PC->CacheMovementSkillSet = MovementSkill;
+
+			if (auto PerceptionSkill = Cast<UFortAthenaAIBotPerceptionDigestedSkillSet>(SkillSet))
+				PC->CachePerceptionDigestedSkillSet = PerceptionSkill;
+
+			if (auto PlayStyleSkill = Cast<UFortAthenaAIBotPlayStyleDigestedSkillSet>(SkillSet))
+				PC->CachePlayStyleSkillSet = PlayStyleSkill;
+
+			if (auto RangeAttackSkill = Cast<UFortAthenaAIBotRangeAttackDigestedSkillSet>(SkillSet))
+				PC->CacheRangeAttackSkillSet = RangeAttackSkill;
+
+			if (auto UnstuckSkill = Cast<UFortAthenaAIBotUnstuckDigestedSkillSet>(SkillSet))
+				PC->CacheUnstuckSkillSet = UnstuckSkill;
 		}
 
 		if (PC->CosmeticLoadoutBC.Character)
@@ -235,11 +321,14 @@ namespace FortAthenaAIBotController {
 		}
 		PlayerState->OnRep_CharacterData();
 
-		if (!PC->RunBehaviorTree(PC->BehaviorTree)) {
-			Log("BehaviorTree Failed To Run For Pawn: " + Pawn->GetFullName());
-		}
-		else {
-			Log("Ran BehaviorTree: " + PC->BehaviorTree->GetFullName());
+		if (!Globals::bBotsShouldUseManualTicking) {
+			if (!PC->RunBehaviorTree(PC->BehaviorTree)) {
+				Log("BehaviorTree Failed To Run For Pawn: " + Pawn->GetFullName());
+			}
+			else {
+				Log("Ran BehaviorTree: " + PC->BehaviorTree->GetFullName());
+				PC->BlueprintOnBehaviorTreeStarted();
+			}
 		}
 		PC->Blackboard->SetValueAsEnum(UKismetStringLibrary::GetDefaultObj()->Conv_StringToName(L"AIEvaluator_Global_GamePhaseStep"), (int)GameState->GamePhaseStep);
 		PC->Blackboard->SetValueAsEnum(UKismetStringLibrary::GetDefaultObj()->Conv_StringToName(L"AIEvaluator_Global_GamePhase"), (int)GameState->GamePhase);
@@ -284,6 +373,7 @@ namespace FortAthenaAIBotController {
 
 		NpcAI::NpcBot* Bot = new NpcAI::NpcBot(PC, Pawn, PlayerState);
 		NpcAI::NpcBots.push_back(Bot);
+		Bot->BT_NPC = NpcAI::ConstructBehaviorTree();
 		AmountTimesCalled++;
 	}
 
@@ -359,6 +449,8 @@ namespace FortAthenaAIBotController {
 
 		MH_CreateHook((LPVOID)(ImageBase + 0x450A108), OnPossessedPawnDied, (LPVOID*)&OnPossessedPawnDiedOG);
 
+		UKismetSystemLibrary::ExecuteConsoleCommand(UWorld::GetWorld(), L"log LogAthenaAIServiceBots VeryVerbose", nullptr);
+		UKismetSystemLibrary::ExecuteConsoleCommand(UWorld::GetWorld(), L"log LogAthenaBots VeryVerbose", nullptr);
 		Log("Hooked FortAIBotControllerAthena!");
 	}
 }

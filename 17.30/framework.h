@@ -463,3 +463,7 @@ AFortPlayerControllerAthena* GetPCFromId(FUniqueNetIdRepl& ID)
 
 	return nullptr;
 }
+
+FName ConvFName(FString Name) {
+	return UKismetStringLibrary::GetDefaultObj()->Conv_StringToName(Name);
+}

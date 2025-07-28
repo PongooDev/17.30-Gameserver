@@ -1,6 +1,16 @@
 #pragma once
 #include "framework.h"
 
+enum class EBlackboardCompareOp
+{
+    Equal,
+    NotEqual,
+    LessThan,
+    LessThanOrEqual,
+    GreaterThan,
+    GreaterThanOrEqual
+};
+
 struct BTContext
 {
     AFortAthenaAIBotController* Controller;
@@ -47,6 +57,8 @@ public:
     }
 
     EBTNodeResult Tick(BTContext& Context) {
+        float CurrentTime = UGameplayStatics::GetDefaultObj()->GetTimeSeconds(UWorld::GetWorld());
+
         // If a decorator fails then we shouldnt execute the task
         for (BTDecorator* Decorator : Decorators) {
             if (!Decorator->Evaluate(Context)) {
@@ -55,7 +67,10 @@ public:
         }
 
         for (BTService* Service : Services) {
-            Service->TickService(Context);
+            if (Service->Interval == 0.f || CurrentTime >= Service->NextTickTime) {
+                Service->TickService(Context);
+                Service->NextTickTime = CurrentTime + Service->Interval;
+			}
         }
 
         // Run the task once all of the decorators pass
@@ -72,6 +87,7 @@ private:
 
 public:
     std::string Name;
+	std::string NodeName;
 public:
     void AddChild(BTNode* Node) {
         Children.push_back(Node);
@@ -86,6 +102,8 @@ public:
     }
 
     virtual EBTNodeResult Tick(BTContext Context) {
+        float CurrentTime = UGameplayStatics::GetDefaultObj()->GetTimeSeconds(UWorld::GetWorld());
+
         // If a global selector decorator fails we shouldnt execute anything inside of the selector (shouldnt be on the root)
         for (BTDecorator* Decorator : Decorators) {
             if (!Decorator->Evaluate(Context)) {
@@ -94,7 +112,10 @@ public:
         }
 
         for (BTService* Service : Services) {
-            Service->TickService(Context);
+            if (Service->Interval == 0.f || CurrentTime >= Service->NextTickTime) {
+                Service->TickService(Context);
+                Service->NextTickTime = CurrentTime + Service->Interval;
+            }
         }
 
         // Run all of the selectors children then if all fail then return faliure
@@ -119,10 +140,12 @@ public:
 
     BTComposite_Selector* FindSelectorByName(std::string Name) {
         for (BTComposite_Selector* Selector : AllNodes) {
-            if (Selector->Name == Name) {
+            if (Selector->Name == Name || Selector->NodeName == Name) {
                 return Selector;
             }
         }
+
+		Log("Selector with name " + Name + " not found!");
         return nullptr;
     }
 

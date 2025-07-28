@@ -105,6 +105,10 @@ namespace NetDriver {
 			}
 		}
 
+		if (Globals::bBotsEnabled && Globals::bBotsShouldUseManualTicking) {
+			NpcAI::TickBots();
+		}
+
 		return TickFlushOG(This, DeltaSeconds); //bro forgot to add return
 	}
 
