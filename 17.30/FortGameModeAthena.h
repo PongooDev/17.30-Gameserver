@@ -165,9 +165,6 @@ namespace FortGameModeAthena {
 					}
 				}
 
-				UGameplayStatics::GetAllActorsOfClass(UWorld::GetWorld(), ABuildingFoundation::StaticClass(), &BuildingFoundations);
-				UGameplayStatics::GetAllActorsOfClass(UWorld::GetWorld(), AFortPlayerStartWarmup::StaticClass(), &PlayerStarts);
-
 				Log("Initialised Bots!");
 			}
 			else
@@ -235,6 +232,9 @@ namespace FortGameModeAthena {
 		}
 
 		if (GameState->PlayersLeft > 0) {
+			UGameplayStatics::GetAllActorsOfClass(UWorld::GetWorld(), ABuildingFoundation::StaticClass(), &BuildingFoundations);
+			UGameplayStatics::GetAllActorsOfClass(UWorld::GetWorld(), AFortPlayerStartWarmup::StaticClass(), &PlayerStarts);
+
 			return true;
 		}
 		else {

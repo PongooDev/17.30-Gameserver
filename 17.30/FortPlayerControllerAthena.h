@@ -2,6 +2,7 @@
 #include "framework.h"
 #include "FortInventory.h"
 #include "Looting.h"
+#include "Vehicles.h"
 #include "BotsSpawner.h"
 
 namespace FortPlayerControllerAthena {
@@ -26,6 +27,7 @@ namespace FortPlayerControllerAthena {
 		{
 			bSetupWorld = true;
 			Looting::SpawnFloorLoot();
+			Vehicles::SpawnVehicles();
 
 			BotsSpawner::SpawnBosses();
 			BotsSpawner::SpawnGuards();

@@ -28,6 +28,12 @@
     <Filter Include="Resources\AI">
       <UniqueIdentifier>{288cf6c6-a1b4-4fa3-a3cd-de8781bf9bb5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Resources\AI\BehaviorTree">
+      <UniqueIdentifier>{59c0c585-288e-401a-8bc9-d4926fbb3c8a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources\AI\Phoebe">
+      <UniqueIdentifier>{ff8536dd-712c-49eb-998b-7fcc4cd5eca3}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
@@ -101,6 +107,18 @@
     </ClInclude>
     <ClInclude Include="NpcSpawnLocations.h">
       <Filter>Resources\AI</Filter>
+    </ClInclude>
+    <ClInclude Include="NpcAI.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BehaviorTree_System.h">
+      <Filter>Resources\AI\BehaviorTree</Filter>
+    </ClInclude>
+    <ClInclude Include="PhoebeDisplayNames.h">
+      <Filter>Resources\AI\Phoebe</Filter>
+    </ClInclude>
+    <ClInclude Include="Vehicles.h">
+      <Filter>Hooks</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -1,6 +1,8 @@
 #pragma once
 #include "framework.h"
 #include "FortGameModeAthena.h"
+#include "BotsSpawner.h"
+#include "FortAthenaAIBotController.h"
 
 namespace NetDriver {
 	EAthenaGamePhaseStep GetCurrentGamePhaseStep(AFortGameModeAthena* GameMode, AFortGameStateAthena* GameState) {
@@ -59,7 +61,10 @@ namespace NetDriver {
 			}
 		}
 
-		bot->Blackboard->SetValueAsEnum(UKismetStringLibrary::GetDefaultObj()->Conv_StringToName(L"AIEvaluator_Global_GamePhaseStep"), (int)GameState->GamePhaseStep);
+		if (bot->Blackboard->GetValueAsEnum(UKismetStringLibrary::GetDefaultObj()->Conv_StringToName(L"AIEvaluator_Global_GamePhaseStep")) != (uint8)GameState->GamePhaseStep) {
+			bot->Blackboard->SetValueAsEnum(UKismetStringLibrary::GetDefaultObj()->Conv_StringToName(L"AIEvaluator_Global_GamePhaseStep"), (int)GameState->GamePhaseStep);
+			//Log("Updated Bot GamePhaseStep!");
+		}
 	}
 
 	void (*TickFlushOG)(UNetDriver* This, float DeltaSeconds);
@@ -74,8 +79,8 @@ namespace NetDriver {
 			EAthenaGamePhaseStep CurrentGamePhaseStep = GetCurrentGamePhaseStep(GameMode, GameState);
 			GameState->GamePhaseStep = CurrentGamePhaseStep;
 			if (Globals::bBotsEnabled) {
-				for (AFortAthenaAIBotController* bot : GameMode->AliveBots) {
-					UpdateBotBlackboard(bot, GameMode, GameState);
+				for (FortAthenaAIBotController::BotSpawnData& SpawnedBot : FortAthenaAIBotController::SpawnedBots) {
+					UpdateBotBlackboard(SpawnedBot.Controller, GameMode, GameState);
 				}
 			}
 		}
@@ -87,6 +92,17 @@ namespace NetDriver {
 		if (GameState->WarmupCountdownEndTime - UGameplayStatics::GetTimeSeconds(UWorld::GetWorld()) <= 0 && GameState->GamePhase == EAthenaGamePhase::Warmup)
 		{
 			FortGameModeAthena::StartAircraftPhase(GameMode, 0);
+		}
+
+		if (GameState->GamePhase == EAthenaGamePhase::Warmup &&
+			GameMode->AlivePlayers.Num() > 0
+			&& (GameMode->AlivePlayers.Num() + GameMode->AliveBots.Num()) < GameMode->GameSession->MaxPlayers
+			&& GameMode->AliveBots.Num() < Globals::MaxBotsToSpawn && Globals::bBotsEnabled)
+		{
+			if (UKismetMathLibrary::GetDefaultObj()->RandomBoolWithWeight(0.045f))
+			{
+				BotsSpawner::SpawnPlayerBot();
+			}
 		}
 
 		return TickFlushOG(This, DeltaSeconds); //bro forgot to add return

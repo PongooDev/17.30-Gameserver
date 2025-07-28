@@ -139,6 +139,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="AbilitySystemComponent.h" />
+    <ClInclude Include="BehaviorTree_System.h" />
     <ClInclude Include="BotsSpawner.h" />
     <ClInclude Include="Building.h" />
     <ClInclude Include="FortAthenaAIBotController.h" />
@@ -151,7 +152,9 @@
     <ClInclude Include="Looting.h" />
     <ClInclude Include="Misc.h" />
     <ClInclude Include="NetDriver.h" />
+    <ClInclude Include="NpcAI.h" />
     <ClInclude Include="NpcSpawnLocations.h" />
+    <ClInclude Include="PhoebeDisplayNames.h" />
     <ClInclude Include="SDK\PropertyFixup.hpp" />
     <ClInclude Include="SDK\SDK.hpp" />
     <ClInclude Include="SDK\SDK\AIModule_classes.hpp" />
@@ -162,6 +165,7 @@
     <ClInclude Include="SDK\SDK\FortniteGame_structs.hpp" />
     <ClInclude Include="SDK\UnrealContainers.hpp" />
     <ClInclude Include="SDK\UtfN.hpp" />
+    <ClInclude Include="Vehicles.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp" />

@@ -418,6 +418,23 @@ inline std::vector<T*> GetAllObjectsOfClass(UClass* Class = T::StaticClass())
 	return Objects;
 }
 
+template <class T>
+TArray<T*> GetAllActorsOfClass() {
+	TArray<T*> ResultActors;
+
+	if (UWorld* World = UWorld::GetWorld()) {
+		TArray<AActor*> OutActors;
+		UGameplayStatics::GetAllActorsOfClass(World, T::StaticClass(), &OutActors);
+
+		for (AActor* Actor : OutActors) {
+			if (T* CastedActor = Cast<T>(Actor)) {
+				ResultActors.Add(CastedActor);
+			}
+		}
+	}
+	return ResultActors;
+}
+
 int CountActorsWithName(FName TargetName, UClass* Class)
 {
 	TArray<AActor*> FoundActors;

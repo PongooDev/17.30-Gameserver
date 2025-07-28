@@ -9,4 +9,12 @@ namespace NpcSpawnLocations {
 			-2628.0
 		},
 	};
+
+	std::vector<FVector> IOGruntSpawnLocations{
+		{
+			28648.0,
+			43384.0,
+			-1720.0
+		}
+	};
 }
