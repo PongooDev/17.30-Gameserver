@@ -1,6 +1,7 @@
 #pragma once
 #include "framework.h"
 #include "Looting.h"
+#include "AbilitySystemComponent.h"
 #include "NpcAI.h"
 
 #include "PhoebeDisplayNames.h"
@@ -16,6 +17,16 @@ namespace FortAthenaAIBotController {
 		AFortPlayerStateAthena* PlayerState;
 	};
 	std::vector<BotSpawnData> SpawnedBots;
+
+	void (*CreateAndConfigureNavigationSystemOG)(UAthenaNavSystemConfig* ModuleConfig, UWorld* World);
+	void CreateAndConfigureNavigationSystem(UAthenaNavSystemConfig* ModuleConfig, UWorld* World)
+	{
+		Log("CreateAndConfigureNavigationSystem For World: " + World->GetName() + " For NavConfig: " + ModuleConfig->GetName());
+		ModuleConfig->bPrioritizeNavigationAroundSpawners = true;
+		ModuleConfig->bAutoSpawnMissingNavData = true;
+		ModuleConfig->bSpawnNavDataInNavBoundsLevel = true;
+		return CreateAndConfigureNavigationSystemOG(ModuleConfig, World);
+	}
 
 	// Pathfinding
 	void (*InitializeForWorldOG)(UNavigationSystemV1* NavSystem, UWorld* World, EFNavigationSystemRunMode Mode);
@@ -54,6 +65,10 @@ namespace FortAthenaAIBotController {
 				}
 			}
 		}
+		if (PC->BotIDSuffix.ToString().contains("Clone")) {
+			Log("SloneClone");
+			BotSpawnerData = StaticLoadObject<UClass>("/Slone/NPCs/Slone/SloneClone/BP_AIBotSpawnerData_SloneClone.BP_AIBotSpawnerData_SloneClone_C");
+		}
 		if (BotSpawnerData) {
 			UFortAthenaAIBotSpawnerData* SpawnerData = Cast<UFortAthenaAIBotSpawnerData>(BotSpawnerData->DefaultObject);
 			if (!SpawnerData) {
@@ -75,6 +90,8 @@ namespace FortAthenaAIBotController {
 			}
 
 			UFortAthenaAISpawnerDataComponent_ConversationBase* ConversationComp = SpawnerData->GetConversationComponent();
+
+			AbilitySystemComponent::GiveAbilitySet(StaticLoadObject<UFortAbilitySet>("/Game/Abilities/Player/Generic/Traits/DefaultPlayer/GAS_AthenaPlayer.GAS_AthenaPlayer"), PlayerState);
 		}
 
 		if (!PC->PathFollowingComponent->MyNavData) {
@@ -321,18 +338,13 @@ namespace FortAthenaAIBotController {
 		}
 		PlayerState->OnRep_CharacterData();
 
-		if (!Globals::bBotsShouldUseManualTicking) {
-			if (!PC->RunBehaviorTree(PC->BehaviorTree)) {
-				Log("BehaviorTree Failed To Run For Pawn: " + Pawn->GetFullName());
-			}
-			else {
-				Log("Ran BehaviorTree: " + PC->BehaviorTree->GetFullName());
-				PC->BlueprintOnBehaviorTreeStarted();
-			}
+		if (Globals::bBotsShouldUseManualTicking) {
+			PC->BrainComponent->StopLogic(L"Manual Ticking Enabled!");
 		}
 		PC->Blackboard->SetValueAsEnum(UKismetStringLibrary::GetDefaultObj()->Conv_StringToName(L"AIEvaluator_Global_GamePhaseStep"), (int)GameState->GamePhaseStep);
 		PC->Blackboard->SetValueAsEnum(UKismetStringLibrary::GetDefaultObj()->Conv_StringToName(L"AIEvaluator_Global_GamePhase"), (int)GameState->GamePhase);
 		PC->Blackboard->SetValueAsBool(UKismetStringLibrary::GetDefaultObj()->Conv_StringToName(L"AIEvaluator_Global_IsMovementBlocked"), false);
+		PC->Blackboard->SetValueAsEnum(UKismetStringLibrary::GetDefaultObj()->Conv_StringToName(L"AIEvaluator_RangeAttack_ExecutionStatus"), (int)EExecutionStatus::ExecutionAllowed);
 
 		if (PC->StartupInventory) {
 			for (auto& Items : PC->StartupInventory->Items)
@@ -344,7 +356,7 @@ namespace FortAthenaAIBotController {
 
 				UFortWorldItem* Item = (UFortWorldItem*)ItemDef->CreateTemporaryItemInstanceBP(Items.Count, 0);
 				Item->OwnerInventory = PC->Inventory;
-				Item->ItemEntry.LoadedAmmo = 1;
+				Item->ItemEntry.LoadedAmmo = 60;
 				PC->Inventory->Inventory.ReplicatedEntries.Add(Item->ItemEntry);
 				PC->Inventory->Inventory.ItemInstances.Add(Item);
 				PC->Inventory->Inventory.MarkItemDirty(Item->ItemEntry);
@@ -417,30 +429,81 @@ namespace FortAthenaAIBotController {
 
 				SpawnPickup(Bars, UKismetMathLibrary::GetDefaultObj()->RandomIntegerInRange(10, 150), 0, PC->Pawn->K2_GetActorLocation(), EFortPickupSourceTypeFlag::Other, EFortPickupSpawnSource::BotElimination);
 			}
-		}
 
-		if (PC->Inventory) {
-			for (int32 i = 0; i < PC->Inventory->Inventory.ReplicatedEntries.Num(); i++)
-			{
-				if (PC->Inventory->Inventory.ReplicatedEntries[i].ItemDefinition->IsA(UFortWeaponMeleeItemDefinition::StaticClass())) {
-					continue;
-				}
-				if (!((UFortWorldItemDefinition*)PC->Inventory->Inventory.ReplicatedEntries[i].ItemDefinition)->bCanBeDropped) {
-					continue;
-				}
-				auto Def = PC->Inventory->Inventory.ReplicatedEntries[i].ItemDefinition;
-				SpawnPickup(Def, 0, 0, PC->Pawn->K2_GetActorLocation(), EFortPickupSourceTypeFlag::Other, EFortPickupSpawnSource::BotElimination);
-				UFortAmmoItemDefinition* AmmoDef = (UFortAmmoItemDefinition*)((UFortWeaponRangedItemDefinition*)Def)->GetAmmoWorldItemDefinition_BP();
-				if (AmmoDef) {
-					SpawnPickup(AmmoDef, AmmoDef->DropCount, 0, PC->Pawn->K2_GetActorLocation(), EFortPickupSourceTypeFlag::Other, EFortPickupSpawnSource::BotElimination);
+			if (PC->Inventory) {
+				for (int32 i = 0; i < PC->Inventory->Inventory.ReplicatedEntries.Num(); i++)
+				{
+					if (PC->Inventory->Inventory.ReplicatedEntries[i].ItemDefinition->IsA(UFortWeaponMeleeItemDefinition::StaticClass())) {
+						continue;
+					}
+					if (!((UFortWorldItemDefinition*)PC->Inventory->Inventory.ReplicatedEntries[i].ItemDefinition)->bCanBeDropped) {
+						continue;
+					}
+					auto Def = PC->Inventory->Inventory.ReplicatedEntries[i].ItemDefinition;
+					SpawnPickup(Def, 0, 0, PC->Pawn->K2_GetActorLocation(), EFortPickupSourceTypeFlag::Other, EFortPickupSpawnSource::BotElimination);
+					UFortAmmoItemDefinition* AmmoDef = (UFortAmmoItemDefinition*)((UFortWeaponRangedItemDefinition*)Def)->GetAmmoWorldItemDefinition_BP();
+					if (AmmoDef) {
+						SpawnPickup(AmmoDef, AmmoDef->DropCount, 0, PC->Pawn->K2_GetActorLocation(), EFortPickupSourceTypeFlag::Other, EFortPickupSpawnSource::BotElimination);
+					}
 				}
 			}
 		}
 
-		return OnPossessedPawnDiedOG(PC, DamagedActor, Damage, InstigatedBy, DamageCauser, HitLocation, HitComp, BoneName, Momentum);
+		return;
+		//return OnPossessedPawnDiedOG(PC, DamagedActor, Damage, InstigatedBy, DamageCauser, HitLocation, HitComp, BoneName, Momentum);
+	}
+
+	wchar_t* (*OnPerceptionSensedOG)(ABP_PhoebePlayerController_C* PC, AActor* SourceActor, FAIStimulus& Stimulus);
+	wchar_t* OnPerceptionSensed(AFortAthenaAIBotController* PC, AActor* SourceActor, FAIStimulus& Stimulus) {
+		if (!PC || !SourceActor) {
+			return nullptr;
+		}
+
+		for (FortAthenaAIBotController::BotSpawnData& SpawnedBot : FortAthenaAIBotController::SpawnedBots) {
+			if (!SpawnedBot.Controller || !SpawnedBot.Pawn || !SpawnedBot.PlayerState)
+				continue;
+
+			if (SpawnedBot.Controller == PC) {
+				if (SpawnedBot.Controller->CurrentAlertLevel == EAlertLevel::Threatened) {
+					SpawnedBot.Controller->Blackboard->SetValueAsEnum(UKismetStringLibrary::GetDefaultObj()->Conv_StringToName(L"AIEvaluator_RangeAttack_ExecutionStatus"), (int)EExecutionStatus::ExecutionAllowed);
+					SpawnedBot.Controller->Blackboard->SetValueAsBool(UKismetStringLibrary::GetDefaultObj()->Conv_StringToName(L"AIEvaluator_ManageWeapon_Fire"), true);
+				}
+			}
+		}
+	}
+
+	float GetTrackingModifierInternal(UFortAthenaAIBotAimingDigestedSkillSet* This, int Curve, double SignNegationProbability) {
+		//Log("GetTrackingModifierInternal Called!");
+		float TrackingModifier = Curve * (1.f - SignNegationProbability);
+		return TrackingModifier;
+	}
+
+	const FDigestedWeaponAccuracy* GetWeaponAccuracy(UFortAthenaAIBotAimingDigestedSkillSet* This, AFortWeapon* Weapon) {
+		//Log("GetWeaponAccuracy Called!");
+		FDigestedWeaponAccuracy* Accuracy = new FDigestedWeaponAccuracy();
+		Accuracy->bKeepAimingOnSameSideWhileFiring = true;
+		Accuracy->ChanceToAimAtTargetsFeet = 0.1f;
+		Accuracy->FiringRestrictedToTargetingActive = FScalableFloat();
+		Accuracy->IdealAttackRange = 1000.f;
+		Accuracy->MaxAttackRange = 5000.f;
+		Accuracy->MaxRotationInterpSpeed = 10.f;
+		Accuracy->MinRotationInterpSpeed = 5.f;
+		Accuracy->ShouldUseProjectileArcForAiming = FScalableFloat();
+		Accuracy->TargetingActivationProbability = FScalableFloat();
+		Accuracy->TargetingIdealAttackRange = 1000.f;
+		Accuracy->TargetingTrackingDistanceFarError = FScalableFloat();
+		Accuracy->TargetingTrackingDistanceNearError = FScalableFloat();
+		Accuracy->TargetingTrackingOffsetError = FScalableFloat();
+		Accuracy->TrackingDistanceFarError = FScalableFloat();
+		Accuracy->TrackingDistanceNearError = FScalableFloat();
+		Accuracy->TrackingDistanceNearErrorProbability = FScalableFloat();
+		Accuracy->TrackingOffsetError = FScalableFloat();
+		return Accuracy;
 	}
 
 	void HookAll() {
+		MH_CreateHook((LPVOID)(ImageBase + 0x2047EA4), CreateAndConfigureNavigationSystem, (LPVOID*)&CreateAndConfigureNavigationSystemOG);
+
 		HookVTable(UAthenaNavSystem::GetDefaultObj(), 0x55, InitializeForWorld, (LPVOID*)&InitializeForWorldOG);
 
 		MH_CreateHook((LPVOID)(ImageBase + 0x4509720), OnPawnAISpawned, (LPVOID*)&OnPawnAISpawnedOG);
@@ -448,6 +511,10 @@ namespace FortAthenaAIBotController {
 		MH_CreateHook((LPVOID)(ImageBase + 0x46C5688), InventoryBaseOnSpawned, (LPVOID*)&InventoryBaseOnSpawnedOG);
 
 		MH_CreateHook((LPVOID)(ImageBase + 0x450A108), OnPossessedPawnDied, (LPVOID*)&OnPossessedPawnDiedOG);
+
+		MH_CreateHook((LPVOID)(ImageBase + 0x467FE94), GetTrackingModifierInternal, nullptr);
+
+		MH_CreateHook((LPVOID)(ImageBase + 0x4680088), GetWeaponAccuracy, nullptr);
 
 		UKismetSystemLibrary::ExecuteConsoleCommand(UWorld::GetWorld(), L"log LogAthenaAIServiceBots VeryVerbose", nullptr);
 		UKismetSystemLibrary::ExecuteConsoleCommand(UWorld::GetWorld(), L"log LogAthenaBots VeryVerbose", nullptr);

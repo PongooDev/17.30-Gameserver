@@ -47,6 +47,59 @@ namespace NpcAI {
 
 			NpcBots.push_back(this);
 		}
+
+		bool IsPickaxeEquiped() {
+			if (!Pawn || !Pawn->CurrentWeapon)
+				return false;
+
+			if (Pawn->CurrentWeapon->WeaponData->IsA(UFortWeaponMeleeItemDefinition::StaticClass()))
+			{
+				return true;
+			}
+			return false;
+		}
+
+		void EquipPickaxe()
+		{
+			if (!Pawn || !Pawn->CurrentWeapon)
+				return;
+
+			if (IsPickaxeEquiped()) {
+				return;
+			}
+
+			for (size_t i = 0; i < PC->Inventory->Inventory.ReplicatedEntries.Num(); i++)
+			{
+				if (PC->Inventory->Inventory.ReplicatedEntries[i].ItemDefinition->IsA(UFortWeaponMeleeItemDefinition::StaticClass()))
+				{
+					Pawn->EquipWeaponDefinition((UFortWeaponItemDefinition*)PC->Inventory->Inventory.ReplicatedEntries[i].ItemDefinition, PC->Inventory->Inventory.ReplicatedEntries[i].ItemGuid, PC->Inventory->Inventory.ReplicatedEntries[i].TrackerGuid, false);
+					break;
+				}
+			}
+		}
+
+		void SwitchToWeapon() {
+			if (!Pawn || !Pawn->CurrentWeapon || !Pawn->CurrentWeapon->WeaponData || !PC || !PC->Inventory)
+				return;
+
+			if (!Pawn->CurrentWeapon->WeaponData->IsA(UFortWeaponMeleeItemDefinition::StaticClass())) {
+				return;
+			}
+
+			if (Pawn->CurrentWeapon->WeaponData->IsA(UFortWeaponMeleeItemDefinition::StaticClass()))
+			{
+				for (size_t i = 0; i < PC->Inventory->Inventory.ReplicatedEntries.Num(); i++)
+				{
+					auto& Entry = PC->Inventory->Inventory.ReplicatedEntries[i];
+					if (Entry.ItemDefinition) {
+						if (Entry.ItemDefinition->ItemType == EFortItemType::Weapon) {
+							Pawn->EquipWeaponDefinition((UFortWeaponItemDefinition*)Entry.ItemDefinition, Entry.ItemGuid, Entry.TrackerGuid, false);
+							break;
+						}
+					}
+				}
+			}
+		}
 	};
 
 	namespace BT_NPC_Tasks {
@@ -128,26 +181,74 @@ namespace NpcAI {
 
 		class BTTask_SteerMovement : public BTNode {
 		public:
+			FVector CachedDirection;
+			float DirectionChangeInterval = 1.f;
+			float NextDirectionChangeTime = 0.f;
+		public:
 			virtual EBTNodeResult ChildTask(BTContext Context) override {
 				if (!Context.Pawn || !Context.Controller) {
 					return EBTNodeResult::Failed;
 				}
 				//Log("SteerMovement Task Called");
 
-				// TODO: Fix the bot moving, The bot currently just stands still and does not move
-				FVector TargetLocation = Context.Pawn->K2_GetActorLocation();
-				TargetLocation.X += UKismetMathLibrary::GetDefaultObj()->RandomFloatInRange(-500.f, 500.f);
-				TargetLocation.Y += UKismetMathLibrary::GetDefaultObj()->RandomFloatInRange(-500.f, 500.f);
-				EPathFollowingRequestResult Result = Context.Controller->MoveToLocation(TargetLocation, 20.f, true, false, false, true, nullptr, true);
-				if (Result == EPathFollowingRequestResult::Failed) {
-					Log("SteerMovement: Task failed to execute MoveToLocation!");
+				float CurrentTime = UGameplayStatics::GetDefaultObj()->GetTimeSeconds(UWorld::GetWorld());
+				auto Math = UKismetMathLibrary::GetDefaultObj();
+
+				if (DirectionChangeInterval == 0.f || CurrentTime >= NextDirectionChangeTime) {
+					if (Math->RandomBool()) {
+						CachedDirection = Context.Pawn->GetActorForwardVector();
+					} else if (Math->RandomBool()) {
+						CachedDirection = Context.Pawn->GetActorRightVector();
+					} else if (Math->RandomBool()) {
+						CachedDirection = Context.Pawn->GetActorRightVector() * -1.0f;
+					}
+					else {
+						CachedDirection = Context.Pawn->GetActorForwardVector() * -1.0f;
+					}
+
+					NextDirectionChangeTime = CurrentTime + DirectionChangeInterval;
+				}
+
+				Context.Pawn->AddMovementInput(CachedDirection, 1.0f, true);
+				return EBTNodeResult::Succeeded;
+			}
+		};
+
+		class BTTask_ShootTrap : public BTNode {
+		public:
+			virtual EBTNodeResult ChildTask(BTContext Context) override {
+				// I will look into this later, Since i dont know an optimal way to loop through all the traps without messing up the ping!
+				return EBTNodeResult::Failed;
+			}
+		};
+
+		class BTTask_BotMoveTo : public BTNode {
+		public:
+			float AcceptableRadius = 100.f;
+			bool bAllowStrafe = true;
+			bool bStopOnOverlapNeedsUpdate = false;
+			bool bUsePathfinding = false;
+			bool bProjectDestinationToNavigation = false;
+			bool bAllowPartialPath = false;
+			FName SelectedKeyName;
+			FName MovementResultKey;
+		public:
+			virtual EBTNodeResult ChildTask(BTContext Context) override {
+				if (!Context.Pawn || !Context.Controller) {
 					return EBTNodeResult::Failed;
 				}
-				else if (Result == EPathFollowingRequestResult::RequestSuccessful) {
+
+				FVector Dest = Context.Controller->Blackboard->GetValueAsVector(SelectedKeyName);
+				Context.Controller->K2_SetFocalPoint(Dest);
+				EPathFollowingRequestResult RequestResult = Context.Controller->MoveToLocation(Dest, AcceptableRadius, bStopOnOverlapNeedsUpdate, bUsePathfinding, bProjectDestinationToNavigation, bAllowStrafe, nullptr, bAllowPartialPath);
+				Context.Controller->Blackboard->SetValueAsEnum(MovementResultKey, (uint8)RequestResult);
+				if (RequestResult == EPathFollowingRequestResult::Failed) {
+					//Log("Failed to move to location: " + SelectedKeyName.ToString());
+					return EBTNodeResult::Failed;
+				} 
+				
+				if (RequestResult == EPathFollowingRequestResult::RequestSuccessful) {
 					return EBTNodeResult::InProgress;
-				}
-				else if (Result == EPathFollowingRequestResult::AlreadyAtGoal) {
-					return EBTNodeResult::Succeeded;
 				}
 
 				return EBTNodeResult::Succeeded;
@@ -228,27 +329,6 @@ namespace NpcAI {
 			}
 		};
 
-		class BTService_AIEvaluator_39 : public BTService {
-		public:
-			BTService_AIEvaluator_39() {
-				Name = "FortAthenaBTService_AIEvaluator_39";
-				NodeName = "Evaluating...Character Launched";
-			}
-
-			virtual void TickService(BTContext Context) override {
-				if (!Context.Pawn || !Context.Controller) return;
-
-				if (Context.Pawn->GetMovementComponent()) {
-					if (Context.Pawn->GetMovementComponent()->IsFalling()) {
-						Context.Controller->Blackboard->SetValueAsEnum(ConvFName(L"AIEvaluator_CharacterLaunched_ExecutionStatus"), (uint8)EExecutionStatus::ExecutionAllowed);
-					}
-					else {
-						Context.Controller->Blackboard->SetValueAsEnum(ConvFName(L"AIEvaluator_CharacterLaunched_ExecutionStatus"), (uint8)EExecutionStatus::ExecutionDenied);
-					}
-				}
-			}
-		};
-
 		class BTService_AIEvaluator_4 : public BTService {
 		public:
 			BTService_AIEvaluator_4() {
@@ -273,6 +353,49 @@ namespace NpcAI {
 				Context.Controller->K2_SetActorRotation(Rot, true);
 
 				Context.Controller->K2_SetFocalPoint(FocusLocation);
+			}
+		};
+
+		class BTService_AIEvaluator_12 : public BTService {
+		public:
+			BTService_AIEvaluator_12() {
+				Name = "FortAthenaBTService_AIEvaluator_12";
+				NodeName = "Evaluating...Escape Evasive Maneuvers";
+
+				Interval = 1.f;
+			}
+
+			virtual void TickService(BTContext Context) override {
+				if (!Context.Pawn || !Context.Controller) return;
+				auto Math = UKismetMathLibrary::GetDefaultObj();
+
+				FVector AvoidDirection = Context.Pawn->K2_GetActorLocation();
+				AvoidDirection.X += Math->RandomFloatInRange(-1500.f, 1500.f);
+				AvoidDirection.Y += Math->RandomFloatInRange(-1500.f, 1500.f);
+
+				Context.Controller->Blackboard->SetValueAsVector(ConvFName(L"AIEvaluator_AvoidThreat_Destination"), AvoidDirection);
+				Context.Controller->Blackboard->SetValueAsEnum(ConvFName(L"AIEvaluator_AvoidThreat_ExecutionStatus"), (uint8)EExecutionStatus::ExecutionDenied);
+			}
+		};
+
+		class BTService_AIEvaluator_39 : public BTService {
+		public:
+			BTService_AIEvaluator_39() {
+				Name = "FortAthenaBTService_AIEvaluator_39";
+				NodeName = "Evaluating...Character Launched";
+			}
+
+			virtual void TickService(BTContext Context) override {
+				if (!Context.Pawn || !Context.Controller) return;
+
+				if (Context.Pawn->GetMovementComponent()) {
+					if (Context.Pawn->GetMovementComponent()->IsFalling()) {
+						Context.Controller->Blackboard->SetValueAsEnum(ConvFName(L"AIEvaluator_CharacterLaunched_ExecutionStatus"), (uint8)EExecutionStatus::ExecutionAllowed);
+					}
+					else {
+						Context.Controller->Blackboard->SetValueAsEnum(ConvFName(L"AIEvaluator_CharacterLaunched_ExecutionStatus"), (uint8)EExecutionStatus::ExecutionDenied);
+					}
+				}
 			}
 		};
 	}
@@ -314,6 +437,30 @@ namespace NpcAI {
 				Decorator->IntValue = (int)EExecutionStatus::ExecutionPending;
 				Decorator->Operator = EBlackboardCompareOp::GreaterThanOrEqual;
 				Task->AddDecorator(Decorator);
+				Selector->AddChild(Task);
+			}
+
+			{
+				// Look into: FortAthenaBTTask_ShootTrap_0
+				auto* Task = new BT_NPC_Tasks::BTTask_ShootTrap();
+				auto* Decorator = new BT_NPC_Decorators::BTDecorator_BlackBoard_Enum();
+				Decorator->SelectedKeyName = ConvFName(L"AIEvaluator_TrapOnPath_ExecutionStatus");
+				Decorator->IntValue = (int)EExecutionStatus::ExecutionPending;
+				Decorator->Operator = EBlackboardCompareOp::GreaterThanOrEqual;
+				Task->AddDecorator(Decorator);
+				Selector->AddChild(Task);
+			}
+
+			{
+				auto* Task = new BT_NPC_Tasks::BTTask_BotMoveTo();
+				Task->SelectedKeyName = ConvFName(L"AIEvaluator_AvoidThreat_Destination");
+				Task->MovementResultKey = ConvFName(L"AIEvaluator_AvoidThreat_MovementState");
+				Task->AddService(new BT_NPC_Services::BTService_AIEvaluator_12());
+				auto* Decorator = new BT_NPC_Decorators::BTDecorator_BlackBoard_Enum();
+				Decorator->SelectedKeyName = ConvFName(L"AIEvaluator_AvoidThreat_ExecutionStatus");
+				Decorator->IntValue = (int)EExecutionStatus::ExecutionAllowed;
+				Decorator->Operator = EBlackboardCompareOp::GreaterThanOrEqual;
+				//Task->AddDecorator(Decorator);
 				Selector->AddChild(Task);
 			}
 
@@ -367,6 +514,28 @@ namespace NpcAI {
 		{
 			if (bot->BT_NPC) {
 				bot->BT_NPC->Tick(bot->Context);
+			}
+		}
+	}
+
+	void TickBehaviorTree() {
+		for (auto bot : NpcBots)
+		{
+			if (bot->PC->CurrentAlertLevel == EAlertLevel::Threatened) {
+				bot->SwitchToWeapon();
+				bot->PC->Blackboard->SetValueAsEnum(ConvFName(L"AIEvaluator_RangeAttack_ExecutionStatus"), (int)EExecutionStatus::ExecutionAllowed);
+				if (UKismetMathLibrary::GetDefaultObj()->RandomBoolWithWeight(0.75f)) {
+					bot->PC->Blackboard->SetValueAsBool(ConvFName(L"AIEvaluator_ManageWeapon_Fire"), true);
+					bot->Pawn->PawnStartFire(0);
+				}
+				else {
+					bot->PC->Blackboard->SetValueAsBool(ConvFName(L"AIEvaluator_ManageWeapon_Fire"), false);
+					bot->Pawn->PawnStopFire(0);
+				}
+			}
+			else {
+				bot->PC->Blackboard->SetValueAsBool(ConvFName(L"AIEvaluator_ManageWeapon_Fire"), false);
+				bot->Pawn->PawnStopFire(0);
 			}
 		}
 	}

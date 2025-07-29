@@ -120,6 +120,13 @@ namespace FortPlayerControllerAthena {
 			}
 			Log("Teleported: X: " + args[1] + " Y: " + args[2] + " Z: " + args[3]);
 		}
+		else if (Command == "TeleportToNPC") {
+			FVector TeleportLoc = NpcAI::NpcBots[0]->Pawn->K2_GetActorLocation();
+			if (!PC->Pawn->K2_TeleportTo(TeleportLoc, PC->Pawn->K2_GetActorRotation())) {
+				FHitResult HitResult;
+				Pawn->K2_SetActorLocation(TeleportLoc, false, &HitResult, true);
+			}
+		}
 		else if (Command == "startaircraft")
 		{
 			UKismetSystemLibrary::GetDefaultObj()->ExecuteConsoleCommand(UWorld::GetWorld(), TEXT("startaircraft"), nullptr);

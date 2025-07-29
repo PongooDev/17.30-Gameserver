@@ -8,7 +8,7 @@ namespace Globals {
 	bool bEventEnabled = false;
 
 	bool bBotsEnabled = true;
-	bool bBotsShouldUseManualTicking = true;
+	bool bBotsShouldUseManualTicking = false;
 
 	int MaxBotsToSpawn = 95;
 	int MinPlayersForEarlyStart = 95;

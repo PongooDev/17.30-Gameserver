@@ -77,10 +77,13 @@ namespace FortGameModeAthena {
 			GameMode->MinRespawnDelay = 5.0f;
 			GameMode->WarmupRequiredPlayerCount = 1;
 
-			GameState->DefaultParachuteDeployTraceForGroundDistance = 10000;
+			GameState->DefaultParachuteDeployTraceForGroundDistance = 7500;
 
 			if (auto BotManager = (UFortServerBotManagerAthena*)UGameplayStatics::SpawnObject(UFortServerBotManagerAthena::StaticClass(), GameMode))
 			{
+				GameMode->AISettings = GameState->CurrentPlaylistInfo.BasePlaylist->AISettings;
+				GameMode->AISettings->AIServices[1] = UAthenaAIServicePlayerBots::StaticClass();
+
 				GameMode->ServerBotManager = BotManager;
 				BotManager->CachedGameState = GameState;
 				BotManager->CachedGameMode = GameMode;
@@ -130,6 +133,8 @@ namespace FortGameModeAthena {
 				{
 					GameMode->AIGoalManager = SpawnActor<AFortAIGoalManager>({});
 				}
+
+				UAISystem::GetDefaultObj()->AILoggingVerbose();
 
 				//this is better (we wont have stuff that goes null anymore + dev stuff check)
 				for (size_t i = 0; i < UObject::GObjects->Num(); i++)
