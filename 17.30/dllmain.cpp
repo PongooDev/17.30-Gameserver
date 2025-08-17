@@ -4,7 +4,7 @@
 #include "FortPlayerPawn.h"
 #include "AbilitySystemComponent.h"
 #include "Looting.h"
-#include "Building.h"
+#include "BuildingActor.h"
 #include "NetDriver.h"
 #include "FortAthenaAIBotController.h"
 #include "Misc.h"
@@ -36,7 +36,7 @@ void Hook() {
     FortPlayerPawn::HookAll();
     AbilitySystemComponent::HookAll();
     Looting::HookAll();
-    Building::HookAll();
+    BuildingActor::HookAll();
 
     NetDriver::HookAll();
     FortAthenaAIBotController::HookAll();

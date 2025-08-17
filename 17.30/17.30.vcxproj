@@ -141,7 +141,7 @@
     <ClInclude Include="AbilitySystemComponent.h" />
     <ClInclude Include="BehaviorTree_System.h" />
     <ClInclude Include="BotsSpawner.h" />
-    <ClInclude Include="Building.h" />
+    <ClInclude Include="BuildingActor.h" />
     <ClInclude Include="FortAthenaAIBotController.h" />
     <ClInclude Include="FortGameModeAthena.h" />
     <ClInclude Include="FortInventory.h" />

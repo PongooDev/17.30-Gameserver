@@ -329,32 +329,7 @@ namespace FortAthenaAIBotController {
 				PC->CacheUnstuckSkillSet = UnstuckSkill;
 		}
 
-		if (PC->CosmeticLoadoutBC.Character)
-		{
-			if (PC->CosmeticLoadoutBC.Character->HeroDefinition)
-			{
-				for (int i = 0; i < PC->CosmeticLoadoutBC.Character->HeroDefinition->Specializations.Num(); i++)
-				{
-					auto SpecStr = UKismetStringLibrary::Conv_NameToString(PC->CosmeticLoadoutBC.Character->HeroDefinition->Specializations[i].ObjectID.AssetPathName);
-					UFortHeroSpecialization* Spec = StaticLoadObject<UFortHeroSpecialization>(SpecStr.ToString());
-					if (Spec)
-					{
-						for (int j = 0; j < Spec->CharacterParts.Num(); j++)
-						{
-							auto PartStr = UKismetStringLibrary::Conv_NameToString(Spec->CharacterParts[j].ObjectID.AssetPathName);
-							UCustomCharacterPart* CharacterPart = StaticLoadObject<UCustomCharacterPart>(PartStr.ToString());
-							if (CharacterPart)
-							{
-								PlayerState->CharacterData.Parts[(uintptr_t)CharacterPart->CharacterPartType] = CharacterPart;
-							}
-							PartStr.Free();
-						}
-					}
-					SpecStr.Free();
-				}
-			}
-		}
-		PlayerState->OnRep_CharacterData();
+		ApplyCharacterCustomization(PlayerState, Pawn);
 
 		if (Globals::bBotsShouldUseManualTicking) {
 			PC->BrainComponent->StopLogic(L"Manual Ticking Enabled!");

@@ -84,13 +84,7 @@
     <ClInclude Include="Misc.h">
       <Filter>Hooks</Filter>
     </ClInclude>
-    <ClInclude Include="Building.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="FortInventory.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Looting.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="FortPlayerPawn.h">
@@ -118,6 +112,12 @@
       <Filter>Resources\AI\Phoebe</Filter>
     </ClInclude>
     <ClInclude Include="Vehicles.h">
+      <Filter>Hooks</Filter>
+    </ClInclude>
+    <ClInclude Include="BuildingActor.h">
+      <Filter>Hooks</Filter>
+    </ClInclude>
+    <ClInclude Include="Looting.h">
       <Filter>Hooks</Filter>
     </ClInclude>
   </ItemGroup>
