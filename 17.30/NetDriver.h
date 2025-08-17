@@ -51,24 +51,19 @@ namespace NetDriver {
 	}
 
 	void UpdateBotBlackboard(AFortAthenaAIBotController* bot, AFortGameModeAthena* GameMode, AFortGameStateAthena* GameState) {
-		if (!bot)
-			return;
+		if (!bot) return;
+		if (!bot->Blackboard) return;
+		if (!GameState) return;
 
-		if (bot->Blackboard->GetValueAsEnum(UKismetStringLibrary::GetDefaultObj()->Conv_StringToName(L"AIEvaluator_Global_GamePhaseStep")) != (uint8)GameState->GamePhaseStep) {
-			bot->Blackboard->SetValueAsEnum(UKismetStringLibrary::GetDefaultObj()->Conv_StringToName(L"AIEvaluator_Global_GamePhaseStep"), (int)GameState->GamePhaseStep);
-			//Log("Updated Bot GamePhaseStep!");
-		}
-
-		/*if (bot->CurrentAlertLevel == EAlertLevel::Threatened) {
-			bot->Blackboard->SetValueAsEnum(UKismetStringLibrary::GetDefaultObj()->Conv_StringToName(L"AIEvaluator_RangeAttack_ExecutionStatus"), (int)EExecutionStatus::ExecutionAllowed);
-			bot->Blackboard->SetValueAsBool(UKismetStringLibrary::GetDefaultObj()->Conv_StringToName(L"AIEvaluator_ManageWeapon_Fire"), true);
-		}*/
+		bot->Blackboard->SetValueAsEnum(UKismetStringLibrary::GetDefaultObj()->Conv_StringToName(L"AIEvaluator_Global_GamePhaseStep"), (int)GameState->GamePhaseStep);
 	}
 
 	void (*TickFlushOG)(UNetDriver* This, float DeltaSeconds);
 	void TickFlush(UNetDriver* This, float DeltaSeconds) {
 		if (!This)
 			return;
+
+		float CurrentTime = UGameplayStatics::GetTimeSeconds(UWorld::GetWorld());
 
 		AFortGameModeAthena* GameMode = (AFortGameModeAthena*)UWorld::GetWorld()->AuthorityGameMode;
 		AFortGameStateAthena* GameState = (AFortGameStateAthena*)UWorld::GetWorld()->GameState;
@@ -79,14 +74,19 @@ namespace NetDriver {
 
 		if (GameMode && GameState) {
 			EAthenaGamePhaseStep CurrentGamePhaseStep = GetCurrentGamePhaseStep(GameMode, GameState);
-			GameState->GamePhaseStep = CurrentGamePhaseStep;
-			if (Globals::bBotsEnabled && !Globals::bBotsShouldUseManualTicking) {
-				for (FortAthenaAIBotController::BotSpawnData& SpawnedBot : FortAthenaAIBotController::SpawnedBots) {
-					if (!SpawnedBot.Controller || !SpawnedBot.Pawn || !SpawnedBot.PlayerState)
-						continue;
+			if (CurrentGamePhaseStep != GameState->GamePhaseStep) {
+				GameState->GamePhaseStep = CurrentGamePhaseStep;
+				/*if (Globals::bBotsEnabled && !Globals::bBotsShouldUseManualTicking) {
+					if (FortAthenaAIBotController::SpawnedBots.size() != 0) {
+						for (int i = 0; i < FortAthenaAIBotController::SpawnedBots.size(); i++) {
+							AFortAthenaAIBotController* PC = FortAthenaAIBotController::SpawnedBots[i].Controller;
+							if (!PC)
+								continue;
 
-					UpdateBotBlackboard(SpawnedBot.Controller, GameMode, GameState);
-				}
+							UpdateBotBlackboard(PC, GameMode, GameState);
+						}
+					}
+				}*/
 			}
 		}
 
@@ -95,7 +95,7 @@ namespace NetDriver {
 			FortGameModeAthena::StartAircraftPhase(GameMode, 0);
 		}
 
-		/*if (GameState->GamePhase == EAthenaGamePhase::Warmup &&
+		if (GameState->GamePhase == EAthenaGamePhase::Warmup &&
 			GameMode->AlivePlayers.Num() > 0
 			&& (GameMode->AlivePlayers.Num() + GameMode->AliveBots.Num()) < GameMode->GameSession->MaxPlayers
 			&& GameMode->AliveBots.Num() < Globals::MaxBotsToSpawn && Globals::bBotsEnabled)
@@ -104,7 +104,7 @@ namespace NetDriver {
 			{
 				BotsSpawner::SpawnPlayerBot();
 			}
-		}*/
+		}
 
 		if (Globals::bBotsEnabled) {
 			if (Globals::bBotsShouldUseManualTicking) {

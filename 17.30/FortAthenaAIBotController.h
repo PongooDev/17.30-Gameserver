@@ -100,6 +100,13 @@ namespace FortAthenaAIBotController {
 		PC->PathFollowingComponent->OnNavDataRegistered(PC->PathFollowingComponent->MyNavData);
 		PC->PathFollowingComponent->Activate(true);
 
+		if (PC->CachedAIServicePlayerBots) {
+			
+		}
+		else {
+			Log("No CachedAIServicePlayerBots!");
+		}
+
 		if (Pawn->Controller->Class == ABP_PhoebePlayerController_C::StaticClass())
 		{
 			ABP_PhoebePlayerController_C* BotPC = (ABP_PhoebePlayerController_C*)PC;
@@ -113,13 +120,24 @@ namespace FortAthenaAIBotController {
 					BotPC->BlueprintOnBehaviorTreeStarted();
 				}
 
-				BotPC->Blackboard->SetValueAsEnum(UKismetStringLibrary::GetDefaultObj()->Conv_StringToName(L"AIEvaluator_Global_GamePhaseStep"), (int)GameState->GamePhaseStep);
-				BotPC->Blackboard->SetValueAsEnum(UKismetStringLibrary::GetDefaultObj()->Conv_StringToName(L"AIEvaluator_Global_GamePhase"), (int)GameState->GamePhase);
-				BotPC->Blackboard->SetValueAsBool(UKismetStringLibrary::GetDefaultObj()->Conv_StringToName(L"AIEvaluator_Global_HasEverJumpedFromBusKey"), false);
+				BotPC->Blackboard->SetValueAsEnum(UKismetStringLibrary::Conv_StringToName(L"AIEvaluator_Global_GamePhaseStep"), (int)GameState->GamePhaseStep);
+				BotPC->Blackboard->SetValueAsEnum(UKismetStringLibrary::Conv_StringToName(L"AIEvaluator_Global_GamePhase"), (int)GameState->GamePhase);
+				BotPC->Blackboard->SetValueAsBool(UKismetStringLibrary::Conv_StringToName(L"AIEvaluator_Global_HasEverJumpedFromBusKey"), false);
+				BotPC->Blackboard->SetValueAsBool(UKismetStringLibrary::Conv_StringToName(L"AIEvaluator_Global_IsMovementBlocked"), false);
+
+				if (UKismetMathLibrary::RandomBool()) {
+					BotPC->Blackboard->SetValueAsBool(UKismetStringLibrary::Conv_StringToName(L"AIEvaluator_WarmupPlayEmote_ExecutionStatus"), (int)EExecutionStatus::ExecutionAllowed);
+				}
+				else {
+					if (UKismetMathLibrary::RandomBool()) {
+						BotPC->Blackboard->SetValueAsBool(UKismetStringLibrary::Conv_StringToName(L"AIEvaluator_WarmupLootAndShoot_ExecutionStatus"), (int)EExecutionStatus::ExecutionAllowed);
+					}
+				}
+
 				if (BuildingFoundations.Num() > 0) {
-					AActor* DropZone = BuildingFoundations[UKismetMathLibrary::GetDefaultObj()->RandomIntegerInRange(0, BuildingFoundations.Num() - 1)];
+					AActor* DropZone = BuildingFoundations[UKismetMathLibrary::RandomIntegerInRange(0, BuildingFoundations.Num() - 1)];
 					if (DropZone) {
-						BotPC->Blackboard->SetValueAsVector(UKismetStringLibrary::GetDefaultObj()->Conv_StringToName(L"AIEvaluator_JumpOffBus_Destination"), DropZone->K2_GetActorLocation());
+						BotPC->Blackboard->SetValueAsVector(UKismetStringLibrary::Conv_StringToName(L"AIEvaluator_JumpOffBus_Destination"), DropZone->K2_GetActorLocation());
 					}
 				}
 				else {
@@ -472,33 +490,40 @@ namespace FortAthenaAIBotController {
 		}
 	}
 
+	float (*GetTrackingModifierInternalOG)(UFortAthenaAIBotAimingDigestedSkillSet* This, int Curve, double SignNegationProbability);
 	float GetTrackingModifierInternal(UFortAthenaAIBotAimingDigestedSkillSet* This, int Curve, double SignNegationProbability) {
-		//Log("GetTrackingModifierInternal Called!");
-		float TrackingModifier = Curve * (1.f - SignNegationProbability);
+		return 0.f;
+		float TrackingModifier = GetTrackingModifierInternal(This, Curve, SignNegationProbability);
+		Log("TrackingModifier: " + std::to_string(TrackingModifier));
+		
 		return TrackingModifier;
 	}
 
-	const FDigestedWeaponAccuracy* GetWeaponAccuracy(UFortAthenaAIBotAimingDigestedSkillSet* This, AFortWeapon* Weapon) {
-		//Log("GetWeaponAccuracy Called!");
-		FDigestedWeaponAccuracy* Accuracy = new FDigestedWeaponAccuracy();
-		Accuracy->bKeepAimingOnSameSideWhileFiring = true;
-		Accuracy->ChanceToAimAtTargetsFeet = 0.1f;
-		Accuracy->FiringRestrictedToTargetingActive = FScalableFloat();
-		Accuracy->IdealAttackRange = 1000.f;
-		Accuracy->MaxAttackRange = 5000.f;
-		Accuracy->MaxRotationInterpSpeed = 10.f;
-		Accuracy->MinRotationInterpSpeed = 5.f;
-		Accuracy->ShouldUseProjectileArcForAiming = FScalableFloat();
-		Accuracy->TargetingActivationProbability = FScalableFloat();
-		Accuracy->TargetingIdealAttackRange = 1000.f;
-		Accuracy->TargetingTrackingDistanceFarError = FScalableFloat();
-		Accuracy->TargetingTrackingDistanceNearError = FScalableFloat();
-		Accuracy->TargetingTrackingOffsetError = FScalableFloat();
-		Accuracy->TrackingDistanceFarError = FScalableFloat();
-		Accuracy->TrackingDistanceNearError = FScalableFloat();
-		Accuracy->TrackingDistanceNearErrorProbability = FScalableFloat();
-		Accuracy->TrackingOffsetError = FScalableFloat();
-		return Accuracy;
+	FDigestedWeaponAccuracy* (*GetWeaponAccuracyOG)(UFortAthenaAIBotAimingDigestedSkillSet* This, AFortWeapon* Weapon);
+	FDigestedWeaponAccuracy* GetWeaponAccuracy(UFortAthenaAIBotAimingDigestedSkillSet* This, AFortWeapon* Weapon) {
+		if (!This || !Weapon || !Weapon->WeaponData) return nullptr;
+
+		/*auto TagName = Weapon->WeaponData->AnalyticTags.GameplayTags[0].TagName;
+		Log(TagName.ToString());
+
+		Log("WeaponAccuraciesNum: " + std::to_string(This->WeaponAccuracies.Num()));
+
+		FDigestedWeaponAccuracy* WeaponAccuracy = nullptr;
+		for (FDigestedWeaponAccuracyCategory& WeaponAccuracyCatagory : This->WeaponAccuracies) {
+			for (FGameplayTag Tag : WeaponAccuracyCatagory.Tags.GameplayTags) {
+				Log("WeaponGameplayTag: " + Tag.TagName.ToString());
+			}
+
+			for (FGameplayTag Tag : WeaponAccuracyCatagory.Tags.ParentTags) {
+				Log("WeaponParentTag: " + Tag.TagName.ToString());
+			}
+
+			WeaponAccuracy = &WeaponAccuracyCatagory.WeaponAccuracy;
+		}*/
+
+		FDigestedWeaponAccuracy* WeaponAccuracy = GetWeaponAccuracyOG(This, Weapon);
+
+		return WeaponAccuracy;
 	}
 
 	void HookAll() {
@@ -512,9 +537,9 @@ namespace FortAthenaAIBotController {
 
 		MH_CreateHook((LPVOID)(ImageBase + 0x450A108), OnPossessedPawnDied, (LPVOID*)&OnPossessedPawnDiedOG);
 
-		MH_CreateHook((LPVOID)(ImageBase + 0x467FE94), GetTrackingModifierInternal, nullptr);
+		//MH_CreateHook((LPVOID)(ImageBase + 0x467FE94), GetTrackingModifierInternal, (LPVOID*)&GetTrackingModifierInternalOG);
 
-		MH_CreateHook((LPVOID)(ImageBase + 0x4680088), GetWeaponAccuracy, nullptr);
+		//MH_CreateHook((LPVOID)(ImageBase + 0x4680088), GetWeaponAccuracy, (LPVOID*)&GetWeaponAccuracyOG);
 
 		UKismetSystemLibrary::ExecuteConsoleCommand(UWorld::GetWorld(), L"log LogAthenaAIServiceBots VeryVerbose", nullptr);
 		UKismetSystemLibrary::ExecuteConsoleCommand(UWorld::GetWorld(), L"log LogAthenaBots VeryVerbose", nullptr);
