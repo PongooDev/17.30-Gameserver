@@ -11,6 +11,7 @@ namespace FortAthenaAIBotController {
 		UClass* BotSpawnerData;
 		int32 RequestID;
 		FString BotIDSuffix;
+		std::string Name;
 
 		AFortAthenaAIBotController* Controller;
 		AFortPlayerPawnAthena* Pawn;
@@ -51,6 +52,8 @@ namespace FortAthenaAIBotController {
 			Log("NavData Dont Exist!");
 		}
 
+		std::string BotName = "";
+
 		UClass* BotSpawnerData = nullptr;
 		auto PC = (AFortAthenaAIBotController*)Pawn->Controller;
 		auto PlayerState = (AFortPlayerStateAthena*)Pawn->PlayerState;
@@ -60,6 +63,7 @@ namespace FortAthenaAIBotController {
 				SpawnedBot.Controller = PC;
 				SpawnedBot.Pawn = Pawn;
 				SpawnedBot.PlayerState = PlayerState;
+				BotName = SpawnedBot.Name;
 				if (SpawnedBot.BotSpawnerData) {
 					BotSpawnerData = SpawnedBot.BotSpawnerData;
 				}
@@ -344,7 +348,7 @@ namespace FortAthenaAIBotController {
 			{
 				UFortItemDefinition* ItemDef = Items.Item;
 				if (!ItemDef) {
-					return;
+					continue;
 				}
 
 				UFortWorldItem* Item = (UFortWorldItem*)ItemDef->CreateTemporaryItemInstanceBP(Items.Count, 0);
@@ -365,14 +369,26 @@ namespace FortAthenaAIBotController {
 			Log("StartupInventory is nullptr!");
 		}
 
-		TArray<AActor*> PatrolPointProviders;
-		UGameplayStatics::GetDefaultObj()->GetAllActorsOfClass(UWorld::GetWorld(), AFortAthenaPatrolPathPointProvider::StaticClass(), &PatrolPointProviders);
-		for (AActor* PatrolPointProviderActor : PatrolPointProviders) {
-			AFortAthenaPatrolPathPointProvider* PatrolPointProvider = (AFortAthenaPatrolPathPointProvider*)PatrolPointProviderActor;
-			if (PatrolPointProvider->AssociatedPatrolPath && PatrolPointProvider->AssociatedPatrolPath->GetFullName().contains(PC->BotIDSuffix.ToString())) {
-				Log("Found Patrol Path!");
-				PC->CachedPatrollingComponent->SetPatrolPath(PatrolPointProvider->AssociatedPatrolPath);
-				break;
+		bool bSetupPatrollingComp = false;
+		if (!bSetupPatrollingComp) {
+			for (AFortAthenaPatrolPathPointProvider* PatrolPointProvider : GetAllActorsOfClass<AFortAthenaPatrolPathPointProvider>()) {
+				if (PatrolPointProvider->AssociatedPatrolPath && (PatrolPointProvider->Name.ToString().contains(BotName.empty() ? PC->BotIDSuffix.ToString() : BotName) || PatrolPointProvider->AssociatedPatrolPath->GetFullName().contains(BotName.empty() ? PC->BotIDSuffix.ToString() : BotName))) {
+					Log("Found Patrol Path For Name: " + (BotName.empty() ? PC->BotIDSuffix.ToString() : BotName));
+					PC->CachedPatrollingComponent->SetPatrolPath(PatrolPointProvider->AssociatedPatrolPath);
+					bSetupPatrollingComp = true;
+					break;
+				}
+			}
+
+			if (!bSetupPatrollingComp) {
+				for (AFortAthenaPatrolPath* PatrolPath : GetAllActorsOfClass<AFortAthenaPatrolPath>()) {
+					if (PatrolPath && PatrolPath->Name.ToString().contains(BotName.empty() ? PC->BotIDSuffix.ToString() : BotName)) {
+						Log("Found Patrol Path For Name: " + (BotName.empty() ? PC->BotIDSuffix.ToString() : BotName));
+						PC->CachedPatrollingComponent->SetPatrolPath(PatrolPath);
+						bSetupPatrollingComp = true;
+						break;
+					}
+				}
 			}
 		}
 

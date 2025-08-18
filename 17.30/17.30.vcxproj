@@ -153,7 +153,6 @@
     <ClInclude Include="Misc.h" />
     <ClInclude Include="NetDriver.h" />
     <ClInclude Include="NpcAI.h" />
-    <ClInclude Include="NpcSpawnLocations.h" />
     <ClInclude Include="PhoebeDisplayNames.h" />
     <ClInclude Include="SDK\PropertyFixup.hpp" />
     <ClInclude Include="SDK\SDK.hpp" />

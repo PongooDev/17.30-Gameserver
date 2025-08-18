@@ -99,9 +99,6 @@
     <ClInclude Include="BotsSpawner.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="NpcSpawnLocations.h">
-      <Filter>Resources\AI</Filter>
-    </ClInclude>
     <ClInclude Include="NpcAI.h">
       <Filter>Header Files</Filter>
     </ClInclude>
