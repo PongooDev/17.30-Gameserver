@@ -19,8 +19,8 @@ namespace FortPlayerPawn {
 		PickUp->PickupLocationData.PickupGuid = PickUp->PrimaryPickupItemEntry.ItemGuid;
 		PickUp->PickupLocationData.PickupTarget = Pawn;
 		PickUp->PickupLocationData.ItemOwner = Pawn;
-		PickUp->PickupLocationData.FlyTime = 0.3f;
-		PickUp->PickupLocationData.bPlayPickupSound = bPlayPickupSound;
+		PickUp->PickupLocationData.FlyTime = 0.4f;
+		PickUp->PickupLocationData.bPlayPickupSound = true;
 		PickUp->OnRep_PickupLocationData();
 
 		PickUp->bPickedUp = true;
@@ -98,11 +98,16 @@ namespace FortPlayerPawn {
 			}
 			else {
 				if (FortInventory::GetQuickBars(CurrentWeapon->WeaponData) == EFortQuickBars::Primary) {
-					FFortItemEntry* CurrentWeaponItemEntry = FortInventory::FindItemEntry(PC, CurrentWeapon->WeaponData);
-					
-					SpawnPickup(CurrentWeapon->WeaponData, CurrentWeaponItemEntry->Count, CurrentWeaponItemEntry->LoadedAmmo, Drop, EFortPickupSourceTypeFlag::Player, EFortPickupSpawnSource::Unset, Pawn);
-					FortInventory::RemoveItem(PC, CurrentWeapon->WeaponData);
-					FortInventory::GiveItem(PC, PickupItemDefinition, PickupCount, 0, false);
+					if (FortInventory::IsInventoryFull(PC)) {
+						FFortItemEntry* CurrentWeaponItemEntry = FortInventory::FindItemEntry(PC, CurrentWeapon->WeaponData);
+
+						SpawnPickup(CurrentWeapon->WeaponData, CurrentWeaponItemEntry->Count, CurrentWeaponItemEntry->LoadedAmmo, Drop, EFortPickupSourceTypeFlag::Player, EFortPickupSpawnSource::Unset, Pawn);
+						FortInventory::RemoveItem(PC, CurrentWeapon->WeaponData);
+						FortInventory::GiveItem(PC, PickupItemDefinition, PickupCount, 0);
+					}
+					else {
+						FortInventory::GiveItem(PC, PickupItemDefinition, PickupCount, 0);
+					}
 				}
 				else {
 					SpawnPickup(PickupItemDefinition, PickupCount, PickupLoadedAmmo, Drop, EFortPickupSourceTypeFlag::Player, EFortPickupSpawnSource::Unset, Pawn);
