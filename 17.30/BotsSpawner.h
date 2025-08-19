@@ -139,7 +139,104 @@ namespace BotsSpawner {
 	}
 
 	void SpawnNpcs() {
+		static std::vector<std::pair<std::string, UClass*>> Bosses = {
+			{
+				"Abstrakt",
+				StaticLoadObject<UClass>("/NPCLibrary/NPCs/Abstrakt/Abstrakt/BP_AIBotSpawnerData_NPC_Abstrakt.BP_AIBotSpawnerData_NPC_Abstrakt_C")
+			},
+			{
+				"AlienTrooper2",
+				StaticLoadObject<UClass>("/NPCLibrary/NPCs/AlienTrooper/AlienTrooper/BP_AIBotSpawnerData_NPC_AlienTrooper.BP_AIBotSpawnerData_NPC_AlienTrooper_C")
+			},
+			{
+				"AlienTrooper3",
+				StaticLoadObject<UClass>("/NPCLibrary/NPCs/AlienTrooper/AlienTrooper/BP_AIBotSpawnerData_NPC_AlienTrooper.BP_AIBotSpawnerData_NPC_AlienTrooper_C")
+			},
+			{
+				"AlienTrooper_14",
+				StaticLoadObject<UClass>("/NPCLibrary/NPCs/AlienTrooper/AlienTrooper/BP_AIBotSpawnerData_NPC_AlienTrooper.BP_AIBotSpawnerData_NPC_AlienTrooper_C")
+			},
+			{
+				"AlienSummer",
+				StaticLoadObject<UClass>("/NPCLibrary/NPCs/AlienSummer/AlienSummer/BP_AIBotSpawnerData_NPC_AlienSummer.BP_AIBotSpawnerData_NPC_AlienSummer_C")
+			},
+			{
+				"Antique",
+				StaticLoadObject<UClass>("/NPCLibrary/NPCs/Antique/Antique/BP_AIBotSpawnerData_NPC_Antique.BP_AIBotSpawnerData_NPC_Antique_C")
+			},
+			{
+				"Believer",
+				StaticLoadObject<UClass>("/NPCLibrary/NPCs/Believer/Believer/BP_AIBotSpawnerData_NPC_Believer.BP_AIBotSpawnerData_NPC_Believer_C")
+			},
+			{
+				"Broccoli",
+				StaticLoadObject<UClass>("/NPCLibrary/NPCs/Broccoli/Broccoli/BP_AIBotSpawnerData_NPC_Broccoli.BP_AIBotSpawnerData_NPC_Broccoli_C")
+			},
+			{
+				"BunkerJonesy",
+				StaticLoadObject<UClass>("/NPCLibrary/NPCs/BunkerJonesy/BunkerJonesy/BP_AIBotSpawnerData_NPC_BunkerJonesy.BP_AIBotSpawnerData_NPC_BunkerJonesy_C")
+			},
+			{
+				"Bushranger",
+				StaticLoadObject<UClass>("/NPCLibrary/NPCs/Bushranger/Bushranger/BP_AIBotSpawnerData_NPC_Bushranger.BP_AIBotSpawnerData_NPC_Bushranger_C")
+			},
+			{
+				"CavernArmored",
+				StaticLoadObject<UClass>("/NPCLibrary/NPCs/CavernArmored/CavernArmored/BP_AIBotSpawnerData_NPC_CavernArmored.BP_AIBotSpawnerData_NPC_CavernArmored_C")
+			},
+			{
+				"Dreamflower",
+				StaticLoadObject<UClass>("/NPCLibrary/NPCs/Dreamflower/Dreamflower/BP_AIBotSpawnerData_NPC_Dreamflower.BP_AIBotSpawnerData_NPC_Dreamflower_C")
+			},
+			{
+				"Emperor",
+				StaticLoadObject<UClass>("/NPCLibrary/NPCs/Emperor/Emperor/BP_AIBotSpawnerData_NPC_Emperor.BP_AIBotSpawnerData_NPC_Emperor_C")
+			},
+			{
+				"Faux",
+				StaticLoadObject<UClass>("/NPCLibrary/NPCs/Faux/Faux/BP_AIBotSpawnerData_NPC_Faux.BP_AIBotSpawnerData_NPC_Faux_C")
+			},
+			{
+				"Hayseed",
+				StaticLoadObject<UClass>("/NPCLibrary/NPCs/Hayseed/Hayseed/BP_AIBotSpawnerData_NPC_Hayseed.BP_AIBotSpawnerData_NPC_Hayseed_C")
+			},
+			{
+				"Marigold",
+				StaticLoadObject<UClass>("/NPCLibrary/NPCs/Marigold/Marigold/BP_AIBotSpawnerData_NPC_Marigold.BP_AIBotSpawnerData_NPC_Marigold_C")
+			},
+			{
+				"Maven",
+				StaticLoadObject<UClass>("/NPCLibrary/NPCs/Maven/Maven/BP_AIBotSpawnerData_NPC_Maven.BP_AIBotSpawnerData_NPC_Maven_C")
+			},
+			{
+				"Rickus",
+				StaticLoadObject<UClass>("/NPCLibrary/NPCs/Rickus/Rickus/BP_AIBotSpawnerData_NPC_Rickus.BP_AIBotSpawnerData_NPC_Rickus_C")
+			},
+			{
+				"Riot",
+				StaticLoadObject<UClass>("/NPCLibrary/NPCs/Riot/Riot/BP_AIBotSpawnerData_NPC_Riot.BP_AIBotSpawnerData_NPC_Riot_C")
+			},
+			{
+				"Rook",
+				StaticLoadObject<UClass>("/NPCLibrary/NPCs/Rook/Rook/BP_AIBotSpawnerData_NPC_Rook.BP_AIBotSpawnerData_NPC_Rook_C")
+			},
+			{
+				"SpecialForces",
+				StaticLoadObject<UClass>("/NPCLibrary/NPCs/SpecialForces/SpecialForces/BP_AIBotSpawnerData_NPC_SpecialForces.BP_AIBotSpawnerData_NPC_SpecialForces_C")
+			},
+			{
+				"SwampStalker",
+				StaticLoadObject<UClass>("/NPCLibrary/NPCs/SwampStalker/SwampStalker/BP_AIBotSpawnerData_NPC_SwampStalker.BP_AIBotSpawnerData_NPC_SwampStalker_C")
+			}
+		};
 		int AmountSpawned = 0;
+
+		for (auto& [Name, SpawnerData] : Bosses)
+		{
+			if (SpawnBot(Name, SpawnerData)) {
+				AmountSpawned++;
+			}
+		}
 
 		Log("Spawned " + std::to_string(AmountSpawned) + " Npcs!");
 	}
