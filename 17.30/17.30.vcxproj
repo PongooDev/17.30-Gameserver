@@ -154,6 +154,7 @@
     <ClInclude Include="NetDriver.h" />
     <ClInclude Include="NpcAI.h" />
     <ClInclude Include="PhoebeDisplayNames.h" />
+    <ClInclude Include="PlayerBots.h" />
     <ClInclude Include="SDK\PropertyFixup.hpp" />
     <ClInclude Include="SDK\SDK.hpp" />
     <ClInclude Include="SDK\SDK\AIModule_classes.hpp" />

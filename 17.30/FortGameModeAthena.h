@@ -3,6 +3,8 @@
 #include "FortInventory.h"
 #include "AbilitySystemComponent.h"
 
+#include "PlayerBots.h"
+
 namespace FortGameModeAthena {
 	bool ReadyToStartMatch(AFortGameModeAthena* GameMode) {
 		static bool bSetupPlaylist = false;
@@ -291,19 +293,20 @@ namespace FortGameModeAthena {
 		}
 
 		AbilitySystemComponent::GiveAbilitySet(StaticLoadObject<UFortAbilitySet>("/Game/Abilities/Player/Generic/Traits/DefaultPlayer/GAS_AthenaPlayer.GAS_AthenaPlayer"), PlayerState);
+		//AbilitySystemComponent::GiveAbilitySet(StaticLoadObject<UFortAbilitySet>("/Game/Abilities/Player/Generic/Traits/DefaultPlayer/GAS_DefaultPlayer.GAS_DefaultPlayer"), PlayerState);
 
 		ApplyCharacterCustomization(PlayerState, Pawn);
 
 		return Pawn;
 	}
 
-	__int64 (*StartAircraftPhaseOG)(AFortGameModeAthena* GameMode, char a2);
+	__int64 (*StartAircraftPhaseOG)(AFortGameModeAthena* GameMode, bool bUseAircraftCountdown);
 	__int64 StartAircraftPhase(AFortGameModeAthena* GameMode, bool bUseAircraftCountdown) {
 		Log("StartAircraftPhase Called!");
-		for (AFortAthenaAIBotController* bot : GameMode->AliveBots) {
-			AFortPlayerStateAthena* botPS = (AFortPlayerStateAthena*)bot->PlayerState;
+		for (PlayerBots::PhoebeBot* bot : PlayerBots::PhoebeBots) {
+			AFortPlayerStateAthena* botPS = bot->PlayerState;
 			botPS->bInAircraft = true;
-			bot->Blackboard->SetValueAsBool(UKismetStringLibrary::GetDefaultObj()->Conv_StringToName(L"AIEvaluator_Global_IsInBus"), true);
+			bot->PC->Blackboard->SetValueAsBool(UKismetStringLibrary::GetDefaultObj()->Conv_StringToName(L"AIEvaluator_Global_IsInBus"), true);
 		}
 
 		return StartAircraftPhaseOG(GameMode, bUseAircraftCountdown);

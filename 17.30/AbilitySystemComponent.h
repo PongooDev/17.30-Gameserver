@@ -25,6 +25,16 @@ namespace AbilitySystemComponent {
 		for (int i = 0; i < AbilitySet->GameplayAbilities.Num(); i++) {
 			GiveAbility((UFortGameplayAbility*)AbilitySet->GameplayAbilities[i].Get()->DefaultObject, PS);
 		}
+
+		for (int i = 0; i < AbilitySet->GrantedGameplayEffects.Num(); i++) {
+			UClass* GameplayEffect = AbilitySet->GrantedGameplayEffects[i].GameplayEffect.Get();
+			float Level = AbilitySet->GrantedGameplayEffects[i].Level;
+
+			if (!GameplayEffect)
+				continue;
+
+			PS->AbilitySystemComponent->BP_ApplyGameplayEffectToSelf(GameplayEffect, Level, FGameplayEffectContextHandle());
+		}
 	}
 
 	//https://github.com/EpicGames/UnrealEngine/blob/87f8792983fb4228be213b15b57f675dfe143d16/Engine/Plugins/Runtime/GameplayAbilities/Source/GameplayAbilities/Private/AbilitySystemComponent_Abilities.cpp#L584

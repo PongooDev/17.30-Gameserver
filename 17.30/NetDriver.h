@@ -76,7 +76,7 @@ namespace NetDriver {
 			EAthenaGamePhaseStep CurrentGamePhaseStep = GetCurrentGamePhaseStep(GameMode, GameState);
 			if (CurrentGamePhaseStep != GameState->GamePhaseStep) {
 				GameState->GamePhaseStep = CurrentGamePhaseStep;
-				/*if (Globals::bBotsEnabled && !Globals::bBotsShouldUseManualTicking) {
+				if (Globals::bBotsEnabled && !Globals::bBotsShouldUseManualTicking) {
 					if (FortAthenaAIBotController::SpawnedBots.size() != 0) {
 						for (int i = 0; i < FortAthenaAIBotController::SpawnedBots.size(); i++) {
 							AFortAthenaAIBotController* PC = FortAthenaAIBotController::SpawnedBots[i].Controller;
@@ -86,7 +86,7 @@ namespace NetDriver {
 							UpdateBotBlackboard(PC, GameMode, GameState);
 						}
 					}
-				}*/
+				}
 			}
 		}
 

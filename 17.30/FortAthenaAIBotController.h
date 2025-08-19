@@ -3,6 +3,7 @@
 #include "Looting.h"
 #include "AbilitySystemComponent.h"
 #include "NpcAI.h"
+#include "PlayerBots.h"
 
 #include "PhoebeDisplayNames.h"
 
@@ -104,197 +105,116 @@ namespace FortAthenaAIBotController {
 		PC->PathFollowingComponent->OnNavDataRegistered(PC->PathFollowingComponent->MyNavData);
 		PC->PathFollowingComponent->Activate(true);
 
-		if (PC->CachedAIServicePlayerBots) {
-			
-		}
-		else {
-			Log("No CachedAIServicePlayerBots!");
-		}
-
 		if (Pawn->Controller->Class == ABP_PhoebePlayerController_C::StaticClass())
 		{
-			ABP_PhoebePlayerController_C* BotPC = (ABP_PhoebePlayerController_C*)PC;
-			if (BotPC)
-			{
-				if (!PC->RunBehaviorTree(PC->BehaviorTree)) {
-					Log("BehaviorTree Failed To Run For Pawn: " + Pawn->GetFullName());
-				}
-				else {
-					Log("Ran BehaviorTree: " + PC->BehaviorTree->GetFullName());
-					BotPC->BlueprintOnBehaviorTreeStarted();
-				}
+			PC->Blackboard->SetValueAsEnum(UKismetStringLibrary::Conv_StringToName(L"AIEvaluator_Global_GamePhaseStep"), (int)GameState->GamePhaseStep);
+			PC->Blackboard->SetValueAsEnum(UKismetStringLibrary::Conv_StringToName(L"AIEvaluator_Global_GamePhase"), (int)GameState->GamePhase);
+			PC->Blackboard->SetValueAsBool(UKismetStringLibrary::Conv_StringToName(L"AIEvaluator_Global_HasEverJumpedFromBusKey"), false);
+			PC->Blackboard->SetValueAsBool(UKismetStringLibrary::Conv_StringToName(L"AIEvaluator_Global_IsMovementBlocked"), false);
 
-				BotPC->Blackboard->SetValueAsEnum(UKismetStringLibrary::Conv_StringToName(L"AIEvaluator_Global_GamePhaseStep"), (int)GameState->GamePhaseStep);
-				BotPC->Blackboard->SetValueAsEnum(UKismetStringLibrary::Conv_StringToName(L"AIEvaluator_Global_GamePhase"), (int)GameState->GamePhase);
-				BotPC->Blackboard->SetValueAsBool(UKismetStringLibrary::Conv_StringToName(L"AIEvaluator_Global_HasEverJumpedFromBusKey"), false);
-				BotPC->Blackboard->SetValueAsBool(UKismetStringLibrary::Conv_StringToName(L"AIEvaluator_Global_IsMovementBlocked"), false);
-
+			if (UKismetMathLibrary::RandomBool()) {
+				PC->Blackboard->SetValueAsBool(UKismetStringLibrary::Conv_StringToName(L"AIEvaluator_WarmupPlayEmote_ExecutionStatus"), (int)EExecutionStatus::ExecutionAllowed);
+			}
+			else {
 				if (UKismetMathLibrary::RandomBool()) {
-					BotPC->Blackboard->SetValueAsBool(UKismetStringLibrary::Conv_StringToName(L"AIEvaluator_WarmupPlayEmote_ExecutionStatus"), (int)EExecutionStatus::ExecutionAllowed);
+					PC->Blackboard->SetValueAsBool(UKismetStringLibrary::Conv_StringToName(L"AIEvaluator_WarmupLootAndShoot_ExecutionStatus"), (int)EExecutionStatus::ExecutionAllowed);
 				}
-				else {
-					if (UKismetMathLibrary::RandomBool()) {
-						BotPC->Blackboard->SetValueAsBool(UKismetStringLibrary::Conv_StringToName(L"AIEvaluator_WarmupLootAndShoot_ExecutionStatus"), (int)EExecutionStatus::ExecutionAllowed);
-					}
-				}
+			}
 
-				if (BuildingFoundations.Num() > 0) {
-					AActor* DropZone = BuildingFoundations[UKismetMathLibrary::RandomIntegerInRange(0, BuildingFoundations.Num() - 1)];
-					if (DropZone) {
-						BotPC->Blackboard->SetValueAsVector(UKismetStringLibrary::Conv_StringToName(L"AIEvaluator_JumpOffBus_Destination"), DropZone->K2_GetActorLocation());
-					}
+			if (BuildingFoundations.Num() > 0) {
+				AActor* DropZone = BuildingFoundations[UKismetMathLibrary::RandomIntegerInRange(0, BuildingFoundations.Num() - 1)];
+				if (DropZone) {
+					PC->Blackboard->SetValueAsVector(UKismetStringLibrary::Conv_StringToName(L"AIEvaluator_JumpOffBus_Destination"), DropZone->K2_GetActorLocation());
 				}
-				else {
-					Log("No building foundations!");
-				}
+			}
+			else {
+				Log("No building foundations!");
+			}
 
-				auto BotPlayerState = (AFortPlayerStateAthena*)Pawn->PlayerState;
-				if (!Characters.empty()) {
-					auto CID = Characters[UKismetMathLibrary::GetDefaultObj()->RandomIntegerInRange(0, Characters.size() - 1)];
-					if (CID->HeroDefinition)
+			if (!Characters.empty()) {
+				auto CID = Characters[UKismetMathLibrary::GetDefaultObj()->RandomIntegerInRange(0, Characters.size() - 1)];
+				if (CID->HeroDefinition)
+				{
+					if (CID->HeroDefinition->Specializations.IsValid())
 					{
-						if (CID->HeroDefinition->Specializations.IsValid())
+						for (size_t i = 0; i < CID->HeroDefinition->Specializations.Num(); i++)
 						{
-							for (size_t i = 0; i < CID->HeroDefinition->Specializations.Num(); i++)
+							UFortHeroSpecialization* Spec = StaticLoadObject<UFortHeroSpecialization>(UKismetStringLibrary::GetDefaultObj()->Conv_NameToString(CID->HeroDefinition->Specializations[i].ObjectID.AssetPathName).ToString());
+							if (Spec)
 							{
-								UFortHeroSpecialization* Spec = StaticLoadObject<UFortHeroSpecialization>(UKismetStringLibrary::GetDefaultObj()->Conv_NameToString(CID->HeroDefinition->Specializations[i].ObjectID.AssetPathName).ToString());
-								if (Spec)
+								for (size_t j = 0; j < Spec->CharacterParts.Num(); j++)
 								{
-									for (size_t j = 0; j < Spec->CharacterParts.Num(); j++)
+									UCustomCharacterPart* Part = StaticLoadObject<UCustomCharacterPart>(UKismetStringLibrary::GetDefaultObj()->Conv_NameToString(Spec->CharacterParts[j].ObjectID.AssetPathName).ToString());
+									if (Part)
 									{
-										UCustomCharacterPart* Part = StaticLoadObject<UCustomCharacterPart>(UKismetStringLibrary::GetDefaultObj()->Conv_NameToString(Spec->CharacterParts[j].ObjectID.AssetPathName).ToString());
-										if (Part)
-										{
-											BotPlayerState->CharacterData.Parts[(uintptr_t)Part->CharacterPartType] = Part;
-										}
+										PlayerState->CharacterData.Parts[(uintptr_t)Part->CharacterPartType] = Part;
 									}
 								}
 							}
 						}
 					}
-					if (CID) {
-						Pawn->CosmeticLoadout.Character = CID;
-					}
 				}
-				if (!Backpacks.empty() && UKismetMathLibrary::GetDefaultObj()->RandomBoolWithWeight(0.5)) { // less likely to equip than skin cause lots of ppl prefer not to use backpack
-					auto Backpack = Backpacks[UKismetMathLibrary::GetDefaultObj()->RandomIntegerInRange(0, Backpacks.size() - 1)];
-					for (size_t j = 0; j < Backpack->CharacterParts.Num(); j++)
-					{
-						UCustomCharacterPart* Part = Backpack->CharacterParts[j];
-						if (Part)
-						{
-							BotPlayerState->CharacterData.Parts[(uintptr_t)Part->CharacterPartType] = Part;
-						}
-					}
+				if (CID) {
+					Pawn->CosmeticLoadout.Character = CID;
 				}
-				if (!Gliders.empty()) {
-					auto Glider = Gliders[UKismetMathLibrary::GetDefaultObj()->RandomIntegerInRange(0, Gliders.size() - 1)];
-					Pawn->CosmeticLoadout.Glider = Glider;
-				}
-				if (!Contrails.empty() && UKismetMathLibrary::GetDefaultObj()->RandomBoolWithWeight(0.95)) {
-					auto Contrail = Contrails[UKismetMathLibrary::GetDefaultObj()->RandomIntegerInRange(0, Contrails.size() - 1)];
-					Pawn->CosmeticLoadout.SkyDiveContrail = Contrail;
-				}
-				for (size_t i = 0; i < Dances.size(); i++)
-				{
-					Pawn->CosmeticLoadout.Dances.Add(Dances.at(i));
-				}
-				BotPlayerState->OnRep_CharacterData();
-
-				if (PhoebeDisplayNames.size() != 0) {
-					std::srand(static_cast<unsigned int>(std::time(0)));
-					int randomIndex = std::rand() % PhoebeDisplayNames.size();
-					std::string rdName = PhoebeDisplayNames[randomIndex];
-					PhoebeDisplayNames.erase(PhoebeDisplayNames.begin() + randomIndex);
-
-					int size_needed = MultiByteToWideChar(CP_UTF8, 0, rdName.c_str(), (int)rdName.size(), NULL, 0);
-					std::wstring wideString(size_needed, 0);
-					MultiByteToWideChar(CP_UTF8, 0, rdName.c_str(), (int)rdName.size(), &wideString[0], size_needed);
-
-
-					FString CVName = FString(wideString.c_str());
-					GameMode->ChangeName(BotPC, CVName, true);
-
-					BotPlayerState->OnRep_PlayerName();
-				}
-
-				for (auto SkillSet : BotPC->BotSkillSetClasses)
-				{
-					if (!SkillSet)
-						continue;
-
-					if (auto AimingSkill = Cast<UFortAthenaAIBotAimingDigestedSkillSet>(SkillSet))
-						BotPC->CacheAimingDigestedSkillSet = AimingSkill;
-
-					if (auto AttackingSkill = Cast<UFortAthenaAIBotAttackingDigestedSkillSet>(SkillSet))
-						BotPC->CacheAttackingSkillSet = AttackingSkill;
-
-					if (auto HarvestSkill = Cast<UFortAthenaAIBotHarvestDigestedSkillSet>(SkillSet))
-						BotPC->CacheHarvestDigestedSkillSet = HarvestSkill;
-
-					if (auto InventorySkill = Cast<UFortAthenaAIBotInventoryDigestedSkillSet>(SkillSet))
-						BotPC->CacheInventoryDigestedSkillSet = InventorySkill;
-
-					if (auto LootingSkill = Cast<UFortAthenaAIBotLootingDigestedSkillSet>(SkillSet))
-						BotPC->CacheLootingSkillSet = LootingSkill;
-
-					if (auto MovementSkill = Cast<UFortAthenaAIBotMovementDigestedSkillSet>(SkillSet))
-						BotPC->CacheMovementSkillSet = MovementSkill;
-
-					if (auto PerceptionSkill = Cast<UFortAthenaAIBotPerceptionDigestedSkillSet>(SkillSet))
-						BotPC->CachePerceptionDigestedSkillSet = PerceptionSkill;
-
-					if (auto PlayStyleSkill = Cast<UFortAthenaAIBotPlayStyleDigestedSkillSet>(SkillSet))
-						BotPC->CachePlayStyleSkillSet = PlayStyleSkill;
-
-					if (auto RangeAttackSkill = Cast<UFortAthenaAIBotRangeAttackDigestedSkillSet>(SkillSet))
-						BotPC->CacheRangeAttackSkillSet = RangeAttackSkill;
-
-					if (auto UnstuckSkill = Cast<UFortAthenaAIBotUnstuckDigestedSkillSet>(SkillSet))
-						BotPC->CacheUnstuckSkillSet = UnstuckSkill;
-				}
-
-				if (!BotPC->Inventory)
-					BotPC->Inventory = SpawnActor<AFortInventory>({}, {}, BotPC);
-
-				for (auto& Items : ((AFortGameModeAthena*)UWorld::GetWorld()->AuthorityGameMode)->StartingItems)
-				{
-					if (!Items.Item)
-						continue;
-					UFortWorldItem* Item = Cast<UFortWorldItem>(Items.Item->CreateTemporaryItemInstanceBP(Items.Count, 0));
-					Item->OwnerInventory = BotPC->Inventory;
-					FFortItemEntry& Entry = Item->ItemEntry;
-					BotPC->Inventory->Inventory.ReplicatedEntries.Add(Entry);
-					BotPC->Inventory->Inventory.ItemInstances.Add(Item);
-					BotPC->Inventory->Inventory.MarkItemDirty(Entry);
-					BotPC->Inventory->HandleInventoryLocalUpdate();
-				}
-
-				for (auto& Items : BotPC->StartupInventory->Items)
-				{
-					if (!Items.Item)
-						continue;
-					UFortWorldItem* Item = Cast<UFortWorldItem>(Items.Item->CreateTemporaryItemInstanceBP(Items.Count, 0));
-					Item->OwnerInventory = BotPC->Inventory;
-					FFortItemEntry& Entry = Item->ItemEntry;
-					Entry.LoadedAmmo = 1;
-					BotPC->Inventory->Inventory.ReplicatedEntries.Add(Entry);
-					BotPC->Inventory->Inventory.ItemInstances.Add(Item);
-					BotPC->Inventory->Inventory.MarkItemDirty(Entry);
-					BotPC->Inventory->HandleInventoryLocalUpdate();
-					if (auto WeaponDef = Cast<UFortWeaponMeleeItemDefinition>(Entry.ItemDefinition))
-					{
-						BotPC->PendingEquipWeapon = Item;
-						Pawn->EquipWeaponDefinition(WeaponDef, Entry.ItemGuid, Entry.TrackerGuid, false);
-					}
-				}
-
-				GameMode->AliveBots.Add(BotPC);
-				GameState->PlayerBotsLeft++;
-				GameState->OnRep_PlayerBotsLeft();
 			}
-			AmountTimesCalled++;
-			return;
+			if (!Backpacks.empty() && UKismetMathLibrary::GetDefaultObj()->RandomBoolWithWeight(0.5)) { // less likely to equip than skin cause lots of ppl prefer not to use backpack
+				auto Backpack = Backpacks[UKismetMathLibrary::GetDefaultObj()->RandomIntegerInRange(0, Backpacks.size() - 1)];
+				for (size_t j = 0; j < Backpack->CharacterParts.Num(); j++)
+				{
+					UCustomCharacterPart* Part = Backpack->CharacterParts[j];
+					if (Part)
+					{
+						PlayerState->CharacterData.Parts[(uintptr_t)Part->CharacterPartType] = Part;
+					}
+				}
+			}
+			if (!Gliders.empty()) {
+				auto Glider = Gliders[UKismetMathLibrary::GetDefaultObj()->RandomIntegerInRange(0, Gliders.size() - 1)];
+				Pawn->CosmeticLoadout.Glider = Glider;
+			}
+			if (!Contrails.empty() && UKismetMathLibrary::GetDefaultObj()->RandomBoolWithWeight(0.95)) {
+				auto Contrail = Contrails[UKismetMathLibrary::GetDefaultObj()->RandomIntegerInRange(0, Contrails.size() - 1)];
+				Pawn->CosmeticLoadout.SkyDiveContrail = Contrail;
+			}
+			for (size_t i = 0; i < Dances.size(); i++)
+			{
+				Pawn->CosmeticLoadout.Dances.Add(Dances.at(i));
+			}
+			PlayerState->OnRep_CharacterData();
+
+			if (PhoebeDisplayNames.size() != 0) {
+				std::srand(static_cast<unsigned int>(std::time(0)));
+				int randomIndex = std::rand() % PhoebeDisplayNames.size();
+				std::string rdName = PhoebeDisplayNames[randomIndex];
+				PhoebeDisplayNames.erase(PhoebeDisplayNames.begin() + randomIndex);
+
+				int size_needed = MultiByteToWideChar(CP_UTF8, 0, rdName.c_str(), (int)rdName.size(), NULL, 0);
+				std::wstring wideString(size_needed, 0);
+				MultiByteToWideChar(CP_UTF8, 0, rdName.c_str(), (int)rdName.size(), &wideString[0], size_needed);
+
+
+				FString CVName = FString(wideString.c_str());
+				GameMode->ChangeName(PC, CVName, true);
+
+				PlayerState->OnRep_PlayerName();
+			}
+
+			for (auto& Items : ((AFortGameModeAthena*)UWorld::GetWorld()->AuthorityGameMode)->StartingItems)
+			{
+				if (!Items.Item)
+					continue;
+				UFortWorldItem* Item = Cast<UFortWorldItem>(Items.Item->CreateTemporaryItemInstanceBP(Items.Count, 0));
+				Item->OwnerInventory = PC->Inventory;
+				FFortItemEntry& Entry = Item->ItemEntry;
+				PC->Inventory->Inventory.ReplicatedEntries.Add(Entry);
+				PC->Inventory->Inventory.ItemInstances.Add(Item);
+				PC->Inventory->Inventory.MarkItemDirty(Entry);
+				PC->Inventory->HandleInventoryLocalUpdate();
+			}
+		}
+		else {
+			ApplyCharacterCustomization(PlayerState, Pawn);
 		}
 
 		for (auto SkillSet : PC->BotSkillSetClasses)
@@ -333,8 +253,6 @@ namespace FortAthenaAIBotController {
 				PC->CacheUnstuckSkillSet = UnstuckSkill;
 		}
 
-		ApplyCharacterCustomization(PlayerState, Pawn);
-
 		if (Globals::bBotsShouldUseManualTicking) {
 			PC->BrainComponent->StopLogic(L"Manual Ticking Enabled!");
 		}
@@ -342,6 +260,21 @@ namespace FortAthenaAIBotController {
 		PC->Blackboard->SetValueAsEnum(UKismetStringLibrary::GetDefaultObj()->Conv_StringToName(L"AIEvaluator_Global_GamePhase"), (int)GameState->GamePhase);
 		PC->Blackboard->SetValueAsBool(UKismetStringLibrary::GetDefaultObj()->Conv_StringToName(L"AIEvaluator_Global_IsMovementBlocked"), false);
 		PC->Blackboard->SetValueAsEnum(UKismetStringLibrary::GetDefaultObj()->Conv_StringToName(L"AIEvaluator_RangeAttack_ExecutionStatus"), (int)EExecutionStatus::ExecutionAllowed);
+
+		if (Pawn->Controller->Class == ABP_PhoebePlayerController_C::StaticClass()) {
+			for (auto& Items : ((AFortGameModeAthena*)UWorld::GetWorld()->AuthorityGameMode)->StartingItems)
+			{
+				if (!Items.Item)
+					continue;
+				UFortWorldItem* Item = Cast<UFortWorldItem>(Items.Item->CreateTemporaryItemInstanceBP(Items.Count, 0));
+				Item->OwnerInventory = PC->Inventory;
+				FFortItemEntry& Entry = Item->ItemEntry;
+				PC->Inventory->Inventory.ReplicatedEntries.Add(Entry);
+				PC->Inventory->Inventory.ItemInstances.Add(Item);
+				PC->Inventory->Inventory.MarkItemDirty(Entry);
+				PC->Inventory->HandleInventoryLocalUpdate();
+			}
+		}
 
 		if (PC->StartupInventory) {
 			for (auto& Items : PC->StartupInventory->Items)
@@ -358,10 +291,19 @@ namespace FortAthenaAIBotController {
 				PC->Inventory->Inventory.ItemInstances.Add(Item);
 				PC->Inventory->Inventory.MarkItemDirty(Item->ItemEntry);
 				PC->Inventory->HandleInventoryLocalUpdate();
-				if (auto WeaponDef = Cast<UFortWeaponRangedItemDefinition>(Item->ItemEntry.ItemDefinition))
-				{
-					PC->PendingEquipWeapon = Item;
-					Pawn->EquipWeaponDefinition(WeaponDef, Item->ItemEntry.ItemGuid, Item->ItemEntry.TrackerGuid, false);
+				if (Pawn->Controller->Class == ABP_PhoebePlayerController_C::StaticClass()) {
+					if (auto WeaponDef = Cast<UFortWeaponMeleeItemDefinition>(Item->ItemEntry.ItemDefinition))
+					{
+						PC->PendingEquipWeapon = Item;
+						Pawn->EquipWeaponDefinition(WeaponDef, Item->ItemEntry.ItemGuid, Item->ItemEntry.TrackerGuid, false);
+					}
+				}
+				else {
+					if (auto WeaponDef = Cast<UFortWeaponRangedItemDefinition>(Item->ItemEntry.ItemDefinition))
+					{
+						PC->PendingEquipWeapon = Item;
+						Pawn->EquipWeaponDefinition(WeaponDef, Item->ItemEntry.ItemGuid, Item->ItemEntry.TrackerGuid, false);
+					}
 				}
 			}
 		}
@@ -369,32 +311,39 @@ namespace FortAthenaAIBotController {
 			Log("StartupInventory is nullptr!");
 		}
 
-		bool bSetupPatrollingComp = false;
-		if (!bSetupPatrollingComp) {
-			for (AFortAthenaPatrolPathPointProvider* PatrolPointProvider : GetAllActorsOfClass<AFortAthenaPatrolPathPointProvider>()) {
-				if (PatrolPointProvider->AssociatedPatrolPath && (PatrolPointProvider->Name.ToString().contains(BotName.empty() ? PC->BotIDSuffix.ToString() : BotName) || PatrolPointProvider->AssociatedPatrolPath->GetFullName().contains(BotName.empty() ? PC->BotIDSuffix.ToString() : BotName))) {
-					Log("Found Patrol Path For Name: " + (BotName.empty() ? PC->BotIDSuffix.ToString() : BotName));
-					PC->CachedPatrollingComponent->SetPatrolPath(PatrolPointProvider->AssociatedPatrolPath);
-					bSetupPatrollingComp = true;
-					break;
-				}
-			}
-
+		if (Pawn->Controller->Class != ABP_PhoebePlayerController_C::StaticClass()) {
+			bool bSetupPatrollingComp = false;
 			if (!bSetupPatrollingComp) {
-				for (AFortAthenaPatrolPath* PatrolPath : GetAllActorsOfClass<AFortAthenaPatrolPath>()) {
-					if (PatrolPath && PatrolPath->Name.ToString().contains(BotName.empty() ? PC->BotIDSuffix.ToString() : BotName)) {
+				for (AFortAthenaPatrolPathPointProvider* PatrolPointProvider : GetAllActorsOfClass<AFortAthenaPatrolPathPointProvider>()) {
+					if (PatrolPointProvider->AssociatedPatrolPath && (PatrolPointProvider->Name.ToString().contains(BotName.empty() ? PC->BotIDSuffix.ToString() : BotName) || PatrolPointProvider->AssociatedPatrolPath->GetFullName().contains(BotName.empty() ? PC->BotIDSuffix.ToString() : BotName))) {
 						Log("Found Patrol Path For Name: " + (BotName.empty() ? PC->BotIDSuffix.ToString() : BotName));
-						PC->CachedPatrollingComponent->SetPatrolPath(PatrolPath);
+						PC->CachedPatrollingComponent->SetPatrolPath(PatrolPointProvider->AssociatedPatrolPath);
 						bSetupPatrollingComp = true;
 						break;
+					}
+				}
+
+				if (!bSetupPatrollingComp) {
+					for (AFortAthenaPatrolPath* PatrolPath : GetAllActorsOfClass<AFortAthenaPatrolPath>()) {
+						if (PatrolPath && PatrolPath->Name.ToString().contains(BotName.empty() ? PC->BotIDSuffix.ToString() : BotName)) {
+							Log("Found Patrol Path For Name: " + (BotName.empty() ? PC->BotIDSuffix.ToString() : BotName));
+							PC->CachedPatrollingComponent->SetPatrolPath(PatrolPath);
+							bSetupPatrollingComp = true;
+							break;
+						}
 					}
 				}
 			}
 		}
 
-		NpcAI::NpcBot* Bot = new NpcAI::NpcBot(PC, Pawn, PlayerState);
-		NpcAI::NpcBots.push_back(Bot);
-		Bot->BT_NPC = NpcAI::ConstructBehaviorTree();
+		if (Pawn->Controller->Class != ABP_PhoebePlayerController_C::StaticClass()) {
+			NpcAI::NpcBot* Bot = new NpcAI::NpcBot(PC, Pawn, PlayerState);
+			Bot->BT_NPC = NpcAI::ConstructBehaviorTree();
+		}
+		else {
+			PlayerBots::PhoebeBot* Bot = new PlayerBots::PhoebeBot(PC, Pawn, PlayerState);
+		}
+
 		AmountTimesCalled++;
 	}
 
@@ -494,25 +443,43 @@ namespace FortAthenaAIBotController {
 	FDigestedWeaponAccuracy* GetWeaponAccuracy(UFortAthenaAIBotAimingDigestedSkillSet* This, AFortWeapon* Weapon) {
 		if (!This || !Weapon || !Weapon->WeaponData) return nullptr;
 
-		/*auto TagName = Weapon->WeaponData->AnalyticTags.GameplayTags[0].TagName;
-		Log(TagName.ToString());
-
-		Log("WeaponAccuraciesNum: " + std::to_string(This->WeaponAccuracies.Num()));
+		static UClass* AimingSkillSet = StaticLoadObject<UClass>("/Game/Athena/AI/Phoebe/Skillsets/AI_skill_phoebe_bot_aiming.AI_skill_phoebe_bot_aiming_C");
 
 		FDigestedWeaponAccuracy* WeaponAccuracy = nullptr;
-		for (FDigestedWeaponAccuracyCategory& WeaponAccuracyCatagory : This->WeaponAccuracies) {
-			for (FGameplayTag Tag : WeaponAccuracyCatagory.Tags.GameplayTags) {
-				Log("WeaponGameplayTag: " + Tag.TagName.ToString());
+
+		if (AimingSkillSet) {
+			UFortAthenaAIBotAimingSkillSet* AimingSkill = (UFortAthenaAIBotAimingSkillSet*)AimingSkillSet->DefaultObject;
+
+			auto TagName = Weapon->WeaponData->AnalyticTags.GameplayTags[0].TagName;
+			Log(TagName.ToString());
+			if (TagName.ToString().contains("harvest")) {
+				TagName = ConvFName(L"Weapon.Melee.Impact.Pickaxe");
 			}
 
-			for (FGameplayTag Tag : WeaponAccuracyCatagory.Tags.ParentTags) {
-				Log("WeaponParentTag: " + Tag.TagName.ToString());
+			Log("WeaponAccuraciesNum: " + std::to_string(This->WeaponAccuracies.Num()));
+
+			for (FWeaponAccuracyCategory& WeaponAccuracyCatagory : AimingSkill->WeaponAccuracies) {
+				for (FGameplayTag Tag : WeaponAccuracyCatagory.Tags.ParentTags) {
+					if (Tag.TagName.ToString().contains(TagName.ToString())) {
+						Log("Found WeaponAccuracy: Tag: " + Tag.TagName.ToString());
+						WeaponAccuracy = (FDigestedWeaponAccuracy*)&WeaponAccuracyCatagory.WeaponAccuracy;
+						break;
+					}
+				}
+
+				for (FGameplayTag Tag : WeaponAccuracyCatagory.Tags.GameplayTags) {
+					Log("Tag: " + Tag.TagName.ToString());
+					if (Tag.TagName.ToString().contains(TagName.ToString())) {
+						Log("Found WeaponAccuracy: Tag: " + Tag.TagName.ToString());
+						WeaponAccuracy = (FDigestedWeaponAccuracy*)&WeaponAccuracyCatagory.WeaponAccuracy;
+						break;
+					}
+				}
 			}
-
-			WeaponAccuracy = &WeaponAccuracyCatagory.WeaponAccuracy;
-		}*/
-
-		FDigestedWeaponAccuracy* WeaponAccuracy = GetWeaponAccuracyOG(This, Weapon);
+		}
+		else {
+			Log("Cant Find AimingSkillSet!");
+		}
 
 		return WeaponAccuracy;
 	}

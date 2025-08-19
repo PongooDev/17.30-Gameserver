@@ -241,14 +241,17 @@ namespace BotsSpawner {
 		Log("Spawned " + std::to_string(AmountSpawned) + " Npcs!");
 	}
 
-	void SpawnPlayerBot() {
+	void SpawnPlayerBot(AActor* OverrideSpawn = nullptr) {
 		if (PlayerStarts.Num() == 0) {
 			Log("No PlayerStarts!");
 			UGameplayStatics::GetAllActorsOfClass(UWorld::GetWorld(), AFortPlayerStartWarmup::StaticClass(), &PlayerStarts);
 			return;
 		}
 
-		auto start = PlayerStarts[UKismetMathLibrary::RandomIntegerInRange(0, PlayerStarts.Num() - 1)];
+		AActor* start = PlayerStarts[UKismetMathLibrary::RandomIntegerInRange(0, PlayerStarts.Num() - 1)];
+		if (OverrideSpawn) {
+			start = OverrideSpawn;
+		}
 		if (!start) {
 			Log("No playerstart!");
 			return;

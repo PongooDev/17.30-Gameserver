@@ -513,6 +513,7 @@ namespace NpcAI {
 		for (auto bot : NpcBots)
 		{
 			if (bot->BT_NPC) {
+				bot->Pawn->PawnStartFire(0);
 				bot->BT_NPC->Tick(bot->Context);
 			}
 		}

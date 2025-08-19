@@ -92,7 +92,10 @@ namespace FortPlayerControllerAthena {
 		std::string Command = Msg.ToString();
 		Log(Command);
 
-		if (Command == "GodMode") {
+		if (Command == "SpawnBot") {
+			BotsSpawner::SpawnPlayerBot(Pawn);
+		}
+		else if (Command == "GodMode") {
 			if (!PC->MyFortPawn->bIsInvulnerable) {
 				PC->MyFortPawn->bIsInvulnerable = true;
 			}
