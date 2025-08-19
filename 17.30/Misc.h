@@ -37,6 +37,8 @@ namespace Misc {
 
 		MH_CreateHook((LPVOID)(ImageBase + 0x4d79308), IsTrue, nullptr);
 
+		MH_CreateHook((LPVOID)(ImageBase + 0x46CF05C), IsTrue, nullptr);
+
 		Log("Misc Hooked!");
 	}
 }
