@@ -1,13 +1,13 @@
 #pragma once
 #include "framework.h"
-#include "BehaviorTree_System.h"
+#include "BehaviorTreeSystem.h"
+
+#include "BehaviorTreeDecorators.h"
+#include "BehaviorTreeEvaluators.h"
+#include "BehaviorTreeServices.h"
+#include "BehaviorTreeTasks.h"
 
 namespace PlayerBots {
-	struct BT_Phoebe_Context : BTContext
-	{
-		class PhoebeBot* bot;
-	};
-
 	std::vector<class PhoebeBot*> PhoebeBots{};
 	class PhoebeBot
 	{
@@ -16,7 +16,7 @@ namespace PlayerBots {
 		BehaviorTree* BT_Phoebe = nullptr;
 
 		// The context that should be sent to the behaviortree
-		BT_Phoebe_Context Context = {};
+		BTContext Context = {};
 
 		// The playercontroller of the bot
 		AFortAthenaAIBotController* PC;
@@ -43,7 +43,6 @@ namespace PlayerBots {
 			Context.Controller = PC;
 			Context.Pawn = Pawn;
 			Context.PlayerState = PlayerState;
-			Context.bot = this;
 
 			PhoebeBots.push_back(this);
 		}
@@ -101,4 +100,95 @@ namespace PlayerBots {
 			}
 		}
 	};
+
+	BehaviorTree* ConstructBehaviorTree() {
+		auto* Tree = new BehaviorTree();
+
+		auto* RootSelector = new BTComposite_Selector();
+		RootSelector->NodeName = "Alive";
+
+		{
+			auto* Selector = new BTComposite_Selector();
+			Selector->NodeName = "In Bus";
+
+			{
+				auto* Task = new BTTask_Wait(999.f);
+				auto* Decorator = new BTDecorator_CheckEnum();
+				Decorator->SelectedKeyName = ConvFName(L"AIEvaluator_Global_GamePhaseStep");
+				Decorator->IntValue = (int)EAthenaGamePhaseStep::BusLocked;
+				Task->AddDecorator(Decorator);
+				Selector->AddChild(Task);
+			}
+
+			{
+				auto* Task = new BTTask_Wait(999.f);
+				auto* Decorator = new BTDecorator_CheckEnum();
+				Decorator->SelectedKeyName = ConvFName(L"AIEvaluator_Global_GamePhaseStep");
+				Decorator->IntValue = (int)EAthenaGamePhaseStep::BusFlying;
+				Task->AddDecorator(Decorator);
+
+				Selector->AddChild(Task);
+			}
+
+			{
+				auto* Task = new BTTask_Wait(1.f);
+				Selector->AddChild(Task);
+			}
+
+			{
+				auto* Service = new BTService_ThankBusDriver();
+				Selector->AddService(Service);
+			}
+
+			{
+				auto* Service = new BTService_JumpOffBus();
+				Selector->AddService(Service);
+			}
+
+			Tree->AllNodes.push_back(Selector);
+		}
+
+		{
+			// To be changed to warmup behavior!
+			auto* Task = new BTTask_Wait(1.f);
+			auto* Decorator = new BTDecorator_CheckEnum();
+			Decorator->SelectedKeyName = ConvFName(L"AIEvaluator_Global_GamePhaseStep");
+			Decorator->IntValue = (int)EAthenaGamePhaseStep::GetReady;
+			Decorator->Operator = EBlackboardCompareOp::LessThanOrEqual;
+			auto* Decorator2 = new BTDecorator_CheckEnum();
+			Decorator2->SelectedKeyName = ConvFName(L"AIEvaluator_Global_GamePhase");
+			Decorator2->IntValue = (int)EAthenaGamePhase::Warmup;
+			Task->AddDecorator(Decorator);
+			Task->AddDecorator(Decorator2);
+			RootSelector->AddChild(Task);
+		}
+
+		{
+			auto* Task = new BTTask_RunSelector();
+			Task->SelectorToRun = Tree->FindSelectorByName("In Bus");
+			auto* Decorator = new BTDecorator_IsSet();
+			Decorator->SelectedKeyName = ConvFName(L"AIEvaluator_Global_IsInBus");
+			Task->AddDecorator(Decorator);
+			if (Task->SelectorToRun) {
+				RootSelector->AddChild(Task);
+			}
+		}
+
+		Tree->RootNode = RootSelector;
+		Tree->AllNodes.push_back(RootSelector);
+
+		return Tree;
+	}
+
+	void TickBots() {
+		for (auto bot : PhoebeBots)
+		{
+			if (!bot->bTickEnabled) continue;
+
+			if (bot->BT_Phoebe) {
+				bot->BT_Phoebe->Tick(bot->Context);
+				bot->tick_counter++;
+			}
+		}
+	}
 }

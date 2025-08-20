@@ -20,9 +20,8 @@ namespace NetDriver {
 			}
 		}
 		else if (GameState->GamePhase == EAthenaGamePhase::Aircraft) {
-			if (GameState->GamePhaseStep > EAthenaGamePhaseStep::BusLocked) {
-				// We handle this in OnAircraftEnteredDropZone
-				return GameState->GamePhaseStep;
+			if (!GameState->bAircraftIsLocked) {
+				return EAthenaGamePhaseStep::BusFlying;
 			}
 			else {
 				return EAthenaGamePhaseStep::BusLocked;
@@ -113,6 +112,7 @@ namespace NetDriver {
 			else {
 				NpcAI::TickBehaviorTree();
 			}
+			PlayerBots::TickBots();
 		}
 
 		return TickFlushOG(This, DeltaSeconds); //bro forgot to add return

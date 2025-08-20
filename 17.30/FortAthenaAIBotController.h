@@ -110,6 +110,7 @@ namespace FortAthenaAIBotController {
 			PC->Blackboard->SetValueAsEnum(UKismetStringLibrary::Conv_StringToName(L"AIEvaluator_Global_GamePhaseStep"), (int)GameState->GamePhaseStep);
 			PC->Blackboard->SetValueAsEnum(UKismetStringLibrary::Conv_StringToName(L"AIEvaluator_Global_GamePhase"), (int)GameState->GamePhase);
 			PC->Blackboard->SetValueAsBool(UKismetStringLibrary::Conv_StringToName(L"AIEvaluator_Global_HasEverJumpedFromBusKey"), false);
+			PC->Blackboard->SetValueAsBool(UKismetStringLibrary::Conv_StringToName(L"AIEvaluator_Global_HasEverJumpedFromBusAndLandedKey"), false);
 			PC->Blackboard->SetValueAsBool(UKismetStringLibrary::Conv_StringToName(L"AIEvaluator_Global_IsMovementBlocked"), false);
 
 			if (UKismetMathLibrary::RandomBool()) {
@@ -342,6 +343,7 @@ namespace FortAthenaAIBotController {
 		}
 		else {
 			PlayerBots::PhoebeBot* Bot = new PlayerBots::PhoebeBot(PC, Pawn, PlayerState);
+			Bot->BT_Phoebe = PlayerBots::ConstructBehaviorTree();
 		}
 
 		AmountTimesCalled++;

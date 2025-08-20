@@ -102,9 +102,6 @@
     <ClInclude Include="NpcAI.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="BehaviorTree_System.h">
-      <Filter>Resources\AI\BehaviorTree</Filter>
-    </ClInclude>
     <ClInclude Include="PhoebeDisplayNames.h">
       <Filter>Resources\AI\Phoebe</Filter>
     </ClInclude>
@@ -119,6 +116,21 @@
     </ClInclude>
     <ClInclude Include="PlayerBots.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BehaviorTreeDecorators.h">
+      <Filter>Resources\AI\BehaviorTree</Filter>
+    </ClInclude>
+    <ClInclude Include="BehaviorTreeEvaluators.h">
+      <Filter>Resources\AI\BehaviorTree</Filter>
+    </ClInclude>
+    <ClInclude Include="BehaviorTreeServices.h">
+      <Filter>Resources\AI\BehaviorTree</Filter>
+    </ClInclude>
+    <ClInclude Include="BehaviorTreeSystem.h">
+      <Filter>Resources\AI\BehaviorTree</Filter>
+    </ClInclude>
+    <ClInclude Include="BehaviorTreeTasks.h">
+      <Filter>Resources\AI\BehaviorTree</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

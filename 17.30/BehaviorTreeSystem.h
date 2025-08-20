@@ -46,6 +46,9 @@ private:
     std::vector<BTDecorator*> Decorators;
     std::vector<BTService*> Services;
 public:
+    std::string Name;
+    std::string NodeName;
+public:
     virtual EBTNodeResult ChildTask(BTContext Context) = 0;
 public:
     void AddDecorator(BTDecorator* Decorator) {
@@ -70,7 +73,7 @@ public:
             if (Service->Interval == 0.f || CurrentTime >= Service->NextTickTime) {
                 Service->TickService(Context);
                 Service->NextTickTime = CurrentTime + Service->Interval;
-			}
+            }
         }
 
         // Run the task once all of the decorators pass
@@ -87,7 +90,7 @@ private:
 
 public:
     std::string Name;
-	std::string NodeName;
+    std::string NodeName;
 public:
     void AddChild(BTNode* Node) {
         Children.push_back(Node);
@@ -145,7 +148,7 @@ public:
             }
         }
 
-		Log("Selector with name " + Name + " not found!");
+        Log("Selector with name " + Name + " not found!");
         return nullptr;
     }
 

@@ -317,17 +317,35 @@ namespace FortGameModeAthena {
 	{
 		Log("OnAircraftExitedDropZone!");
 
+		auto GameState = (AFortGameStateAthena*)UWorld::GetWorld()->GameState;
+
+		for (PlayerBots::PhoebeBot* bot : PlayerBots::PhoebeBots) {
+			if (!bot->PlayerState->bInAircraft) continue;
+
+			bot->Pawn->K2_TeleportTo(GameState->GetAircraft(0)->K2_GetActorLocation(), {});
+			bot->Pawn->BeginSkydiving(true);
+			bot->Pawn->SetHealth(100);
+			bot->Pawn->SetShield(0);
+
+			bot->PlayerState->bInAircraft = false;
+
+			bot->PC->Blackboard->SetValueAsBool(UKismetStringLibrary::GetDefaultObj()->Conv_StringToName(L"AIEvaluator_Global_HasEverJumpedFromBusKey"), true);
+			bot->PC->Blackboard->SetValueAsBool(UKismetStringLibrary::GetDefaultObj()->Conv_StringToName(L"AIEvaluator_Global_HasEverJumpedFromBusAndLandedKey"), false);
+			bot->PC->Blackboard->SetValueAsBool(UKismetStringLibrary::GetDefaultObj()->Conv_StringToName(L"AIEvaluator_Global_IsInBus"), false);
+
+			bot->PC->Blackboard->SetValueAsEnum(ConvFName(L"AIEvaluator_Dive_ExecutionStatus"), (int)EExecutionStatus::ExecutionAllowed);
+			bot->PC->Blackboard->SetValueAsEnum(ConvFName(L"AIEvaluator_Glide_ExecutionStatus"), (int)EExecutionStatus::ExecutionDenied);
+		}
+
 		return OriginalOnAircraftExitedDropZone(GameMode, FortAthenaAircraft);
 	}
 
-	__int64 (*OnAircraftEnteredDropZoneOG)(AFortGameModeAthena* GameMode);
-	__int64 OnAircraftEnteredDropZone(AFortGameModeAthena* GameMode)
+	void (*OnAircraftEnteredDropZoneOG)(AFortGameModeAthena* GameMode, AFortAthenaAircraft* FortAthenaAircraft);
+	void OnAircraftEnteredDropZone(AFortGameModeAthena* GameMode, AFortAthenaAircraft* FortAthenaAircraft)
 	{
 		Log("OnAircraftEnteredDropZone Called!");
-		AFortGameStateAthena* GameState = (AFortGameStateAthena*)UWorld::GetWorld()->GameState;
-		GameState->GamePhaseStep = EAthenaGamePhaseStep::BusFlying;
 
-		return OnAircraftEnteredDropZoneOG(GameMode);
+		return OnAircraftEnteredDropZoneOG(GameMode, FortAthenaAircraft);
 	}
 
 	// We can make ts proper later yuh
@@ -392,9 +410,9 @@ namespace FortGameModeAthena {
 
 		MH_CreateHook((LPVOID)(ImageBase + 0x4796A0C), StartAircraftPhase, (LPVOID*)&StartAircraftPhaseOG);
 
-		MH_CreateHook((LPVOID)(ImageBase + 0x4780DD0), OnAircraftExitedDropZone, (LPVOID*)&OriginalOnAircraftExitedDropZone);
+		MH_CreateHook((LPVOID)(ImageBase + 0x5294FE0), OnAircraftExitedDropZone, (LPVOID*)&OriginalOnAircraftExitedDropZone);
 
-		MH_CreateHook((LPVOID)(ImageBase + 0x45109A4), OnAircraftEnteredDropZone, (LPVOID*)&OnAircraftEnteredDropZoneOG);
+		MH_CreateHook((LPVOID)(ImageBase + 0x5294F44), OnAircraftEnteredDropZone, (LPVOID*)&OnAircraftEnteredDropZoneOG);
 
 		MH_CreateHook((LPVOID)(ImageBase + 0x4799688), StartNewSafeZonePhase, (LPVOID*)&StartNewSafeZonePhaseOG);
 

@@ -139,7 +139,11 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="AbilitySystemComponent.h" />
-    <ClInclude Include="BehaviorTree_System.h" />
+    <ClInclude Include="BehaviorTreeDecorators.h" />
+    <ClInclude Include="BehaviorTreeEvaluators.h" />
+    <ClInclude Include="BehaviorTreeServices.h" />
+    <ClInclude Include="BehaviorTreeSystem.h" />
+    <ClInclude Include="BehaviorTreeTasks.h" />
     <ClInclude Include="BotsSpawner.h" />
     <ClInclude Include="BuildingActor.h" />
     <ClInclude Include="FortAthenaAIBotController.h" />

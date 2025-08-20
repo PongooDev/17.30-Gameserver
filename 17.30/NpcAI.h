@@ -1,6 +1,6 @@
 #pragma once
 #include "framework.h"
-#include "BehaviorTree_System.h"
+#include "BehaviorTreeSystem.h"
 
 namespace NpcAI {
 	struct BT_NPC_Context : BTContext
