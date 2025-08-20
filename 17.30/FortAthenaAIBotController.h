@@ -127,6 +127,11 @@ namespace FortAthenaAIBotController {
 				if (DropZone) {
 					PC->Blackboard->SetValueAsVector(UKismetStringLibrary::Conv_StringToName(L"AIEvaluator_JumpOffBus_Destination"), DropZone->K2_GetActorLocation());
 				}
+
+				AActor* MarkerLoc = BuildingFoundations[UKismetMathLibrary::RandomIntegerInRange(0, BuildingFoundations.Num() - 1)];
+				if (MarkerLoc) {
+					PC->Blackboard->SetValueAsVector(UKismetStringLibrary::Conv_StringToName(L"AIEvaluator_Marker_MarkerLocation"), MarkerLoc->K2_GetActorLocation());
+				}
 			}
 			else {
 				Log("No building foundations!");
