@@ -365,9 +365,17 @@ namespace FortAthenaAIBotController {
 	void (*OnPossessedPawnDiedOG)(AFortAthenaAIBotController* PC, AActor* DamagedActor, float Damage, AController* InstigatedBy, AActor* DamageCauser, FVector HitLocation, UPrimitiveComponent* HitComp, FName BoneName, FVector Momentum);
 	void OnPossessedPawnDied(AFortAthenaAIBotController* PC, AActor* DamagedActor, float Damage, AController* InstigatedBy, AActor* DamageCauser, FVector HitLocation, UPrimitiveComponent* HitComp, FName BoneName, FVector Momentum)
 	{
-		if (!PC) {
+		if (!PC || !PC->Pawn || !PC->PlayerState || !InstigatedBy) {
 			return;
 		}
+
+		AFortGameModeAthena* GameMode = (AFortGameModeAthena*)UWorld::GetWorld()->AuthorityGameMode;
+		AFortGameStateAthena* GameState = (AFortGameStateAthena*)UWorld::GetWorld()->GameState;
+
+		AFortPlayerPawnAthena* Pawn = (AFortPlayerPawnAthena*)PC->Pawn;
+		AFortPlayerStateAthena* PlayerState = (AFortPlayerStateAthena*)PC->PlayerState;
+
+		AFortPlayerStateAthena* KillerState = (AFortPlayerStateAthena*)InstigatedBy->PlayerState;
 
 		UClass* BotSpawnerData = nullptr;
 		for (BotSpawnData& SpawnedBot : SpawnedBots) {
@@ -389,21 +397,74 @@ namespace FortAthenaAIBotController {
 
 				SpawnPickup(Bars, UKismetMathLibrary::GetDefaultObj()->RandomIntegerInRange(10, 150), 0, PC->Pawn->K2_GetActorLocation(), EFortPickupSourceTypeFlag::Other, EFortPickupSpawnSource::BotElimination);
 			}
+		}
 
-			if (PC->Inventory) {
-				for (int32 i = 0; i < PC->Inventory->Inventory.ReplicatedEntries.Num(); i++)
+		if (PC->Inventory) {
+			for (int32 i = 0; i < PC->Inventory->Inventory.ReplicatedEntries.Num(); i++)
+			{
+				if (PC->Inventory->Inventory.ReplicatedEntries[i].ItemDefinition->IsA(UFortWeaponMeleeItemDefinition::StaticClass())) {
+					continue;
+				}
+				if (!((UFortWorldItemDefinition*)PC->Inventory->Inventory.ReplicatedEntries[i].ItemDefinition)->bCanBeDropped) {
+					continue;
+				}
+				FFortItemEntry ItemEntry = PC->Inventory->Inventory.ReplicatedEntries[i];
+				if (ItemEntry.Count <= 0) continue;
+				auto Def = ItemEntry.ItemDefinition;
+				SpawnPickup(Def, ItemEntry.Count, ItemEntry.LoadedAmmo, PC->Pawn->K2_GetActorLocation(), EFortPickupSourceTypeFlag::Other, EFortPickupSpawnSource::BotElimination);
+				UFortAmmoItemDefinition* AmmoDef = (UFortAmmoItemDefinition*)((UFortWeaponRangedItemDefinition*)Def)->GetAmmoWorldItemDefinition_BP();
+				if (AmmoDef) {
+					SpawnPickup(AmmoDef, AmmoDef->DropCount, 0, PC->Pawn->K2_GetActorLocation(), EFortPickupSourceTypeFlag::Other, EFortPickupSpawnSource::BotElimination);
+				}
+			}
+		}
+
+		if (Pawn->Controller->Class == ABP_PhoebePlayerController_C::StaticClass()) {
+			for (int i = 0; i < PlayerBots::PhoebeBots.size(); i++) {
+				if (PlayerBots::PhoebeBots[i]->PC == PC) {
+					PlayerBots::PhoebeBots[i]->bTickEnabled = false;
+				}
+			}
+
+			if (!KillerState->bIsABot)
+			{
+				for (size_t i = 0; i < KillerState->PlayerTeam->TeamMembers.Num(); i++)
 				{
-					if (PC->Inventory->Inventory.ReplicatedEntries[i].ItemDefinition->IsA(UFortWeaponMeleeItemDefinition::StaticClass())) {
-						continue;
-					}
-					if (!((UFortWorldItemDefinition*)PC->Inventory->Inventory.ReplicatedEntries[i].ItemDefinition)->bCanBeDropped) {
-						continue;
-					}
-					auto Def = PC->Inventory->Inventory.ReplicatedEntries[i].ItemDefinition;
-					SpawnPickup(Def, 0, 0, PC->Pawn->K2_GetActorLocation(), EFortPickupSourceTypeFlag::Other, EFortPickupSpawnSource::BotElimination);
-					UFortAmmoItemDefinition* AmmoDef = (UFortAmmoItemDefinition*)((UFortWeaponRangedItemDefinition*)Def)->GetAmmoWorldItemDefinition_BP();
-					if (AmmoDef) {
-						SpawnPickup(AmmoDef, AmmoDef->DropCount, 0, PC->Pawn->K2_GetActorLocation(), EFortPickupSourceTypeFlag::Other, EFortPickupSpawnSource::BotElimination);
+					((AFortPlayerStateAthena*)KillerState->PlayerTeam->TeamMembers[i]->PlayerState)->TeamKillScore++;
+					((AFortPlayerStateAthena*)KillerState->PlayerTeam->TeamMembers[i]->PlayerState)->OnRep_TeamKillScore();
+				}
+
+				KillerState->ClientReportKill(PlayerState);
+				KillerState->ClientReportTeamKill(KillerState->KillScore);
+				KillerState->OnRep_Kills();
+			}
+
+			FDeathInfo& DeathInfo = PlayerState->DeathInfo;
+			DeathInfo.bDBNO = Pawn->bWasDBNOOnDeath;
+			DeathInfo.DeathLocation = Pawn->K2_GetActorLocation();
+			DeathInfo.DeathTags = Pawn->DeathTags;
+			DeathInfo.Downer = KillerState ? KillerState : nullptr;
+			AFortPawn* KillerPawn = KillerState ? KillerState->GetCurrentPawn() : nullptr;
+			DeathInfo.Distance = (KillerPawn && Pawn) ? KillerPawn->GetDistanceTo(Pawn) : 0.f;
+			DeathInfo.FinisherOrDowner = KillerState ? KillerState : nullptr;
+			DeathInfo.DeathCause = PlayerState->ToDeathCause(DeathInfo.DeathTags, DeathInfo.bDBNO);
+			DeathInfo.bInitialized = true;
+			PlayerState->OnRep_DeathInfo();
+
+			for (int i = 0; i < GameMode->AliveBots.Num(); i++) {
+				AFortAthenaAIBotController* Controller = GameMode->AliveBots[i];
+				if (Controller == PC) {
+					GameMode->AliveBots.Remove(i);
+				}
+			}
+			GameState->PlayerBotsLeft--;
+			GameState->OnRep_PlayerBotsLeft();
+		}
+		else {
+			if (PC->BehaviorTree->GetName().contains("NPC")) {
+				for (int i = 0; i < NpcAI::NpcBots.size(); i++) {
+					if (NpcAI::NpcBots[i]->PC == PC) {
+						NpcAI::NpcBots[i]->bTickEnabled = false;
 					}
 				}
 			}

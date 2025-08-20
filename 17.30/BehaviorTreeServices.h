@@ -72,6 +72,11 @@ public:
         if (GameState->bAircraftIsLocked) return;
 
         if (UKismetMathLibrary::RandomBoolWithWeight(Weight)) {
+            FVector Destination = Context.Controller->Blackboard->GetValueAsVector(ConvFName(L"AIEvaluator_JumpOffBus_Destination"));
+
+            Context.Controller->Blackboard->SetValueAsVector(ConvFName(L"AIEvaluator_Dive_Destination"), Destination);
+            Context.Controller->Blackboard->SetValueAsVector(ConvFName(L"AIEvaluator_Glide_Destination"), Destination);
+
             Context.Controller->Blackboard->SetValueAsEnum(ConvFName(L"AIEvaluator_Dive_ExecutionStatus"), (int)EExecutionStatus::ExecutionAllowed);
             Context.Controller->Blackboard->SetValueAsEnum(ConvFName(L"AIEvaluator_Glide_ExecutionStatus"), (int)EExecutionStatus::ExecutionDenied);
 

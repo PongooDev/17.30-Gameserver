@@ -322,6 +322,11 @@ namespace FortGameModeAthena {
 		for (PlayerBots::PhoebeBot* bot : PlayerBots::PhoebeBots) {
 			if (!bot->PlayerState->bInAircraft) continue;
 
+			FVector Destination = bot->PC->Blackboard->GetValueAsVector(ConvFName(L"AIEvaluator_JumpOffBus_Destination"));
+
+			bot->PC->Blackboard->SetValueAsVector(ConvFName(L"AIEvaluator_Dive_Destination"), Destination);
+			bot->PC->Blackboard->SetValueAsVector(ConvFName(L"AIEvaluator_Glide_Destination"), Destination);
+
 			bot->Pawn->K2_TeleportTo(GameState->GetAircraft(0)->K2_GetActorLocation(), {});
 			bot->Pawn->BeginSkydiving(true);
 			bot->Pawn->SetHealth(100);
